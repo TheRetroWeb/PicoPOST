@@ -2206,7 +2206,7 @@
   (gr_text "Reset" (at 165.735 90.17) (layer "F.SilkS") (tstamp c873913f-39b3-4fd8-9cf8-a48f40ab27be)
     (effects (font (size 1 1) (thickness 0.15)))
   )
-  (gr_text "33k" (at 154.94 107.315 90) (layer "F.SilkS") (tstamp db81ae42-557e-48d5-82b8-e1eb1d50006d)
+  (gr_text "18k\n" (at 154.94 107.315 90) (layer "F.SilkS") (tstamp db81ae42-557e-48d5-82b8-e1eb1d50006d)
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (gr_text "74LVC245" (at 164.465 133.35) (layer "F.SilkS") (tstamp e5a13c04-e639-4050-98bb-29252e4d4959)
