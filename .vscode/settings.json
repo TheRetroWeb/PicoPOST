@@ -1,0 +1,4 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/firmware",
+    "cmake.configureOnOpen": false
+}

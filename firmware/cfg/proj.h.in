@@ -1,0 +1,28 @@
+/**
+  *    cfg/proj.h
+  * 
+  *    This include file sets firmware options at compile time.
+  *    DO NOT MANUALLY SET VERSION NUMBERS HERE! Use the CMake project
+  *    VERSION definition instead!
+  * 
+  */
+
+#ifndef __PICOPOST_PROJ_CFG
+#define __PICOPOST_PROJ_CFG
+
+// Main firmware major version
+#define PROJ_MAJ_VER   @pico_post_fw_VERSION_MAJOR@
+
+// Main firmware minor version
+#define PROJ_MIN_VER   @pico_post_fw_VERSION_MINOR@
+
+// POST code database version
+#define PROJ_CDB_VER   @pico_post_fw_VERSION_PATCH@
+
+// OLED settings
+#define OLED_ADDR         @OLED_ADDR@
+#define OLED_WIDTH        @OLED_WIDTH@
+#define OLED_HEIGHT       @OLED_HEIGHT@
+#define OLED_DRAW_MODE    @OLED_DRAW_MODE@
+
+#endif // __PICOPOST_PROJ_CFG
