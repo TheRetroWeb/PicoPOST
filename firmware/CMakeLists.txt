@@ -20,7 +20,7 @@ pico_sdk_init()
 ## USER CONFIGURABLE PARAMS
 set(OLED_ADDR      0x3C)
 set(OLED_WIDTH     128)
-set(OLED_HEIGHT    64)
+set(OLED_HEIGHT    32)
 set(OLED_DRAW_MODE 0x08)
 
 # output configuration
