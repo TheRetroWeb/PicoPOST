@@ -100,65 +100,7 @@ void OLED_RenderPage(uint8_t* _buf, size_t _len, uint8_t _startCol, uint8_t _pag
 }
 
 void OLED_ClearScreen() {
-    const size_t pageSize = OLED_WIDTH * OLED_PAGE_HEIGHT;
-    uint8_t* page = malloc(pageSize);
-    for (size_t i = 0; i < pageSize; i++) {
-        page[i] = 0x00;
-    }
-
-    for (uint8_t i = 0; i < OLED_NUM_PAGES; i++) {
-        OLED_RenderPage(page, pageSize, 0, i);
-    }
-    free(page);
-}
-
-void OLED_PrintLine(const char* _text, OLED_Font _font, uint8_t _line) {
-    const size_t pageSize = OLED_WIDTH * OLED_PAGE_HEIGHT;
-    size_t lineLen = strlen(_text);
-    if (lineLen > 18) { // arbitrary max char per line
-        lineLen = 18;
-    }
-
-    uint8_t* page = malloc(pageSize);
-
-    OLED_RenderPage(page, pageSize, 0, _line % OLED_NUM_PAGES);
-    free(page);
-}
-
-/*
-
-void OLED_RenderPage(uint8_t* _buf, size_t _len, uint8_t _startCol, uint8_t _page)
-{
-    OLED_SendCmd(SH1106_SET_ADDR_MODE);
-    OLED_SendCmd(0x00);
-
-    OLED_SendCmd(SH1106_SET_PAGE | _page);
-
-    if (_startCol != oldStartCol) {
-        OLED_SendCmd(SH1106_SET_PAGE_COLADDR_LSB | (_startCol & 0x0F));
-        OLED_SendCmd(SH1106_SET_PAGE_COLADDR_MSB | ((_startCol & 0xF0) >> 4));
-        oldStartCol = _startCol;
-    }
-
-    OLED_SendCmd(SH1106_WRITE_CYCLE_START);
-    OLED_SendBuf(_buf, _len);
-    OLED_SendCmd(SH1106_WRITE_CYCLE_END);
-}
-
-void OLED_RenderScreen(uint8_t* _buf, size_t _len)
-{
-    OLED_SendCmd(SH1106_SET_ADDR_MODE);
-    OLED_SendCmd(0x01);
-    OLED_SendCmd(SH1106_SET_DISP_START_LINE | 0x00);
-
-    OLED_SendCmd(SH1106_WRITE_CYCLE_START);
-    OLED_SendBuf(_buf, _len);
-    OLED_SendCmd(SH1106_WRITE_CYCLE_END);
-}
-
-void OLED_ClearScreen()
-{
-    const size_t pageSize = (OLED_WIDTH + 2) * OLED_PAGE_HEIGHT;
+    const size_t pageSize = (OLED_WIDTH * OLED_PAGE_HEIGHT) / 8;
     uint8_t* page = malloc(pageSize);
     memset(page, 0x00, pageSize);
 
@@ -167,23 +109,23 @@ void OLED_ClearScreen()
     free(page);
 }
 
-void OLED_PrintLine(const char* _text, OLED_Font _font, uint8_t _line)
-{
-    const size_t pageSize = (OLED_WIDTH + 2) * OLED_PAGE_HEIGHT;
+void OLED_PrintLine(const char* _text, OLED_Font _font, uint8_t _line) {
+    const size_t byteWidth = OLED_WIDTH / 8;
+    const size_t pageSize = (byteWidth * OLED_PAGE_HEIGHT);
     size_t lineLen = strlen(_text);
     if (lineLen > 18) { // arbitrary max char per line
         lineLen = 18;
     }
 
     uint8_t* page = malloc(pageSize);
-    for (size_t i = 0; i < strlen(_text); i++) {
-        char c = _text[i];
+    for (size_t i = 0; i < lineLen; i++) {
+        const char c = _text[i];
         if (c >= _font.startAscii && c <= _font.endAscii) {
             for (uint8_t j = 0; j < _font.height; j++) {
                 memcpy(
-                    page + (j * (OLED_WIDTH + 2)) + (i * 8),
-                    _font.bitmap + (c - _font.startAscii) * _font.height + j,
-                    8
+                    page + j + (i * _font.width),
+                    _font.bitmap + ((c - _font.startAscii) * _font.height) + j,
+                    1
                 );
             }
         }
@@ -192,5 +134,3 @@ void OLED_PrintLine(const char* _text, OLED_Font _font, uint8_t _line)
     free(page);
 }
 
-
-*/

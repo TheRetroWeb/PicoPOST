@@ -25,6 +25,7 @@ set(OLED_DRAW_MODE 0x08)
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
+configure_file("cfg/pins.h.in" "cfg/pins.h")
 
 list(APPEND PROJ_INCS "${PROJECT_BINARY_DIR}/cfg")
 list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
@@ -32,6 +33,8 @@ list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
 # import proj libraries
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/oled")
 list(APPEND PROJ_LIBS oled)
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/bus")
+list(APPEND PROJ_LIBS isa_bus)
 
 # finalize executable
 add_executable(pico_post_fw
