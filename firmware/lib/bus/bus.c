@@ -57,18 +57,18 @@ uint8_t Bus_IsResetting() {
 
 uint8_t Bus_IsReady() {
     uint8_t status = 0x00;
-    status = gpio_get(PIN_ISA_RST);
+    status = gpio_get(PIN_ISA_BRDY);
     return status;
 }
 
 uint8_t Bus_GetAddressUpper() {
-    gpio_put(PIN_ADDRESS_BANK, false);
+    gpio_put(PIN_ADDRESS_BANK, true);
     uint32_t gpioMask = gpio_get_all();
     return (gpioMask & MASK_ISA_ADDR) >> SHFT_ISA_ADDR;
 }
 
 uint8_t Bus_GetAddressLower() {
-    gpio_put(PIN_ADDRESS_BANK, true);
+    gpio_put(PIN_ADDRESS_BANK, false);
     uint32_t gpioMask = gpio_get_all();
     return (gpioMask & MASK_ISA_ADDR) >> SHFT_ISA_ADDR;
 }
