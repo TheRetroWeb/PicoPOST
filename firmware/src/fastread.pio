@@ -1,0 +1,53 @@
+;
+; Do I know what I'm doing?
+; Probably not.
+;
+; This is a sad attempt at reading the bus A LOT faster than default GPIOs
+; normally allow.
+;
+
+.program Bus_FastRead
+start_read:
+    wait 1 pin 16               ; Wait for bus_ready signal to transition high
+    nop [ 2 ]
+    set pins, 1                 ; Address bank is set for reading A[15:8]
+    in pins, 16                 ; Push address MSB and data to ISR in one shot
+    set pins, 0                 ; Flip address bank for reading A[7:0]
+    in pins, 16                 ; Push address LSB and data to ISR in one shot
+    push                        ; Push whole read block to FIFO
+    wait 0 pin 16               ; Wait for end of transaction before restarting
+    jmp start_read              ; Profit?
+
+% c-sdk {
+#include "pins.h"
+#include "hardware/gpio.h"
+
+static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
+{
+    for (int i = PIN_ISA_D0; i <= PIN_ADDRESS_BANK; i++) {
+        pio_gpio_init(pio, i);
+    }
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ADDRESS_BANK, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_D0, 17, false);
+    pio_sm_config c = Bus_FastRead_program_get_default_config(offset);
+    sm_config_set_set_pins(&c, PIN_ADDRESS_BANK, 1);
+    sm_config_set_in_pins(&c, PIN_ISA_D0);
+    sm_config_set_clkdiv(&c, 3.0);
+
+    sm_config_set_in_shift(&c, true, true, 16);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+       
+    // Load & start!
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
+{
+    io_rw_32 *rxfifo_shift = (io_rw_32*)&pio->rxf[sm];
+    while (pio_sm_is_rx_fifo_empty(pio, sm))
+        tight_loop_contents();
+    return (uint32_t)*rxfifo_shift;
+}
+
+%}

@@ -1,4 +1,15 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/firmware",
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "files.associations": {
+        "binary_info.h": "c",
+        "defs.h": "c",
+        "structure.h": "c",
+        "code.h": "c",
+        "stdlib.h": "c",
+        "gpio.h": "c",
+        "pins.h": "c",
+        "bus.h": "c",
+        "fastread.pio.h": "c"
+    }
 }

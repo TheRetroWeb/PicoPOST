@@ -33,17 +33,21 @@ list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
 # import proj libraries
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/oled")
 list(APPEND PROJ_LIBS oled)
-add_subdirectory("${PROJECT_SOURCE_DIR}/lib/bus")
-list(APPEND PROJ_LIBS isa_bus)
 
 # finalize executable
 add_executable(pico_post_fw
     "${PROJECT_SOURCE_DIR}/src/main.c"
 )
 
+pico_generate_pio_header(pico_post_fw
+    "${PROJECT_SOURCE_DIR}/src/fastread.pio"
+)
+
 # include libs
 target_link_libraries(pico_post_fw PUBLIC
     pico_stdlib
+    pico_multicore
+    hardware_pio
     ${PROJ_LIBS}
 )
 
