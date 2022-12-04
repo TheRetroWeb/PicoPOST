@@ -1,15 +1,12 @@
 ;
-; Do I know what I'm doing?
-; Probably not.
-;
-; This is a sad attempt at reading the bus A LOT faster than default GPIOs
-; normally allow.
+; This is a successful attempt at reading the bus A LOT faster than default
+; GPIOs normally allow. PIO FTW!
 ;
 
 .program Bus_FastRead
 start_read:
     wait 1 pin 16               ; Wait for bus_ready signal to transition high
-    nop [ 2 ]
+    nop [ 2 ]                   ; Let the bus settle down for a bit
     set pins, 1                 ; Address bank is set for reading A[15:8]
     in pins, 16                 ; Push address MSB and data to ISR in one shot
     set pins, 0                 ; Flip address bank for reading A[7:0]
@@ -36,7 +33,7 @@ static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
 
     sm_config_set_in_shift(&c, true, true, 16);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-       
+
     // Load & start!
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
@@ -48,6 +45,58 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
     while (pio_sm_is_rx_fifo_empty(pio, sm))
         tight_loop_contents();
     return (uint32_t)*rxfifo_shift;
+}
+
+%}
+
+; #############################################################################
+;
+; GPIO IRQs are too slow even for reading the reset pulse. Let's fix that with
+; PIOs.
+;
+
+.program Bus_FastReset
+.wrap_target
+    wait 1 pin 26               ; Wait for reset signal to transition high
+    set X, 0
+    mov ISR, X
+    push                        ; Block FIFO read for main program
+    wait 0 pin 26               ; Wait for reset signal to transition low
+    irq clear 0                 ; Notify SM to accept incoming reset reads
+    set X, 1
+    mov ISR, X
+    push                        ; Send a complete reset event and unlock FIFO
+.wrap
+
+% c-sdk {
+#include "pins.h"
+#include "hardware/gpio.h"
+
+static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset)
+{
+    pio_gpio_init(pio, PIN_ISA_RST);
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_RST, 1, false);
+    pio_sm_config c = Bus_FastReset_program_get_default_config(offset);
+
+    sm_config_set_in_shift(&c, true, true, 1);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+    // Load & start!
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+
+static inline bool Bus_FastReset_BlockingRead(PIO pio, uint sm)
+{
+    if (pio_sm_is_rx_fifo_empty(pio, sm)) {
+        return false;
+    }
+
+    io_ro_8 *rxfifo_shift = (io_ro_8*)&pio->rxf[sm] + 3;
+    while ((*rxfifo_shift & 0x01) == 0) {
+        tight_loop_contents();
+    }
+    return true;
 }
 
 %}
