@@ -13,7 +13,7 @@
 #include "pico/util/queue.h"
 #include <stdio.h>
 
-//#include "oled.h"
+#include "voltmon.h"
 #include "fastread.pio.h"
 #include "main.h"
 
@@ -30,9 +30,16 @@ void WriteSerial()
             queue_remove_blocking(&postList, &buffer);
             switch (buffer.operation) {
 
+            case QO_Volts: {
+                double tstamp = buffer.timestamp / 1000.0;
+                printf("%10.3f | %2d V @ %2.3f V\n",
+                    tstamp, buffer.address, buffer.volts);
+            } break;
+
             case QO_Data: {
                 double tstamp = buffer.timestamp / 1000.0;
-                printf("%10.3f | %02X @ %04Xh\n", tstamp, buffer.data, buffer.address);
+                printf("%10.3f | %02X @ %04Xh\n",
+                    tstamp, buffer.data, buffer.address);
             } break;
 
             case QO_Reset: {
@@ -107,6 +114,41 @@ void Logic_Port80Reader()
     pio_remove_program(pio1, &Bus_FastReset_program, resetOffset);
 }
 
+void Logic_VoltageMonitor()
+{
+    gpio_init(PICO_SMPS_MODE_PIN);
+    gpio_set_dir(PICO_SMPS_MODE_PIN, GPIO_OUT);
+    gpio_put(PICO_SMPS_MODE_PIN, true);
+
+    VoltMon_Init();
+
+    QueueData qd = {
+        .operation = QO_Volts
+    };
+    quitLoop = false;
+    multicore_launch_core1(WriteSerial);
+    lastReset = time_us_64();
+
+    while (!quitLoop) {
+        float readFive = VoltMon_Read5();
+        float readTwelve = VoltMon_Read12();
+        
+        uint64_t tstamp = time_us_64() - lastReset;
+        qd.address = 5;
+        qd.timestamp = tstamp;
+        qd.volts = readFive / 1000;
+        queue_try_add(&postList, &qd);
+        qd.address = 12;
+        qd.timestamp = tstamp;
+        qd.volts = readTwelve / 1000;
+        queue_try_add(&postList, &qd);
+
+        sleep_ms(100);
+    }
+
+    gpio_put(PICO_SMPS_MODE_PIN, false);
+}
+
 int main()
 {
     gpio_init(PICO_DEFAULT_LED_PIN);
@@ -126,7 +168,7 @@ int main()
     while (1) {
         // TODO: implement ui selection for use mode
         // should involve oled and buttons
-        logicSelect = PS_Port80Reader;
+        logicSelect = PS_VoltageMonitor;
 
         // pressing a certain key combo should also trigger a logic exit condition
 
@@ -134,6 +176,10 @@ int main()
 
         case PS_Port80Reader: {
             Logic_Port80Reader();
+        } break;
+
+        case PS_VoltageMonitor: {
+            Logic_VoltageMonitor();
         } break;
 
         default: {

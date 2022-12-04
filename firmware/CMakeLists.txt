@@ -23,9 +23,13 @@ set(OLED_WIDTH     128)
 set(OLED_HEIGHT    32)
 set(OLED_DRAW_MODE 0x08)
 
+set(CALIBADJ_5V 1.0)
+set(CALIBADJ_12V 1.0)
+
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
 configure_file("cfg/pins.h.in" "cfg/pins.h")
+configure_file("cfg/calib.h.in" "cfg/calib.h")
 
 list(APPEND PROJ_INCS "${PROJECT_BINARY_DIR}/cfg")
 list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
@@ -33,6 +37,8 @@ list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
 # import proj libraries
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/oled")
 list(APPEND PROJ_LIBS oled)
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/voltmon")
+list(APPEND PROJ_LIBS volt_mon)
 
 # finalize executable
 add_executable(pico_post_fw

@@ -8,7 +8,7 @@
 #ifndef __PICOPOST_SRC_MAIN
 #define __PICOPOST_SRC_MAIN
 
-// Serial is slow, but I hope we can make do without filling up 512 bytes of
+// Serial is slow, but I hope we can make do without filling up 9.5 kBytes of
 // bus data in less than we can empty the serial buffer at 115200 bps
 #define MAX_QUEUE_LENGTH 512
 
@@ -26,21 +26,23 @@ typedef enum __picopost_main_operation {
 
     QO_Data,
     QO_Reset,
+    QO_Volts,
 
     // More stuff coming soon?
 } QueueOperation;
 
-typedef struct __picopost_main_queuedata {
-    QueueOperation operation;
+typedef struct __attribute__((packed)) __picopost_main_queuedata {
+    QueueOperation operation;    
+    uint64_t timestamp;
+
     uint16_t address;
     uint8_t data;
-    uint64_t timestamp;
+
+    float volts;
 } QueueData;
 
 /**
- * @brief Reads I/O port 80h and returns data to the reader queue.
- *
- * @param pio The PIO instance to use for the read operation.
+ * @brief Reads I/O port 80h and pushes data to the reader queue.
  *
  * @par
  * This is the primary target for this project.
@@ -54,5 +56,15 @@ typedef struct __picopost_main_queuedata {
  *
  */
 void Logic_Port80Reader();
+
+/**
+ * @brief Uses the ADC to probe the 5V and 12V supply rails
+ *
+ * @par
+ * Simply reads 5V and 12V monitoring pins for the ADC about every 100 ms, then
+ * sends data to the queue for the serial port (or OLED) to display.
+ *
+ */
+void Logic_VoltageMonitor();
 
 #endif // __PICOPOST_SRC_MAIN

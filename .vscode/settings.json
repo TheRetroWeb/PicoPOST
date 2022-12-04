@@ -10,6 +10,7 @@
         "gpio.h": "c",
         "pins.h": "c",
         "bus.h": "c",
-        "fastread.pio.h": "c"
+        "fastread.pio.h": "c",
+        "voltmon.h": "c"
     }
 }

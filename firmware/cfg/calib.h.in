@@ -1,0 +1,19 @@
+/**
+  *    cfg/calib.h
+  * 
+  *    This include file sets calibration values for 5V and 12V ADC readout.
+  *    DO NOT MANUALLY SET CALIBRATION VALUES HERE! Use the CMake project
+  *    CALIB definitions instead!
+  * 
+  */
+
+#ifndef __PICOPOST_PROJ_CALIB
+#define __PICOPOST_PROJ_CALIB
+
+// 5V readout calibration
+#define CALIBADJ_5V      @CALIBADJ_5V@
+
+// 12V readout calibration
+#define CALIBADJ_12V      @CALIBADJ_12V@
+
+#endif // __PICOPOST_PROJ_CALIB
