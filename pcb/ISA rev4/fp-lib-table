@@ -1,0 +1,5 @@
+(fp_lib_table
+  (lib (name "MCU_RaspberryPi_and_Boards")(type "KiCad")(uri "C:/Users/Matthew Petry/Documents/PicoPOST/pcb/RP-Pico Libraries/MCU_RaspberryPi_and_Boards.pretty")(options "")(descr ""))
+  (lib (name "IDEcardedge")(type "KiCad")(uri "C:/Users/Matthew Petry/Documents/PicoPOST/pcb/project libraries/IDEcardedge.pretty")(options "")(descr ""))
+  (lib (name "modified ICs")(type "KiCad")(uri "C:/Users/Matthew Petry/Documents/PicoPOST/pcb/RP-Pico Libraries/modified ICs.pretty")(options "")(descr ""))
+)
