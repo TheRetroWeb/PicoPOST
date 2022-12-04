@@ -168,7 +168,7 @@ int main()
     while (1) {
         // TODO: implement ui selection for use mode
         // should involve oled and buttons
-        logicSelect = PS_VoltageMonitor;
+        logicSelect = PS_Port80Reader;
 
         // pressing a certain key combo should also trigger a logic exit condition
 
