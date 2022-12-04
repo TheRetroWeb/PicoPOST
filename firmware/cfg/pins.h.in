@@ -1,0 +1,62 @@
+/**
+  *    cfg/pins.h
+  * 
+  *    Handy global defines for pin/function mapping    
+  * 
+  **/
+
+#ifndef __PICOPOST_DEF_PINS
+#define __PICOPOST_DEF_PINS
+
+#define PIN_ISA_D0 2
+#define PIN_ISA_D1 3
+#define PIN_ISA_D2 4
+#define PIN_ISA_D3 5
+#define PIN_ISA_D4 6
+#define PIN_ISA_D5 7
+#define PIN_ISA_D6 8
+#define PIN_ISA_D7 9
+
+/**
+ * Hardware Notes!
+ * 
+ * Due to the limited amount of GPIO available with the RP2040 MCU, only
+ * A[0..15] are being monitored by the firmware. The upper A[16..19] are
+ * being filtered out by onboard logic gates, resulting in a single
+ * internal "bus ready" signal.
+ * This shouldn't be a problem while attempting to monitor just the BIOS
+ * itself, since it should only be working with the first 16 bits.
+ * Moreover, some level of "bank selection" has to take place. The
+ * firmware will read 8 bits of the address at once and, after a full
+ * readout, it will be merged again into a 16-bit integer.
+ */
+
+#define PIN_ISA_A0 10
+#define PIN_ISA_A1 11
+#define PIN_ISA_A2 12
+#define PIN_ISA_A3 13
+#define PIN_ISA_A4 14
+#define PIN_ISA_A5 15
+#define PIN_ISA_A6 16
+#define PIN_ISA_A7 17
+#define PIN_ISA_A8 10
+#define PIN_ISA_A9 11
+#define PIN_ISA_A10 12
+#define PIN_ISA_A11 13
+#define PIN_ISA_A12 14
+#define PIN_ISA_A13 15
+#define PIN_ISA_A14 16
+#define PIN_ISA_A15 17
+
+// Set high for A[0..7], set low for A[8..15]
+#define PIN_ADDRESS_BANK 19
+
+#define PIN_ISA_BRDY 18
+#define PIN_ISA_RST 26
+
+#define PIN_12V_MON 28
+#define PIN_5V_MON 27
+#define ADC_12V_MON 2
+#define ADC_5V_MON 1
+
+#endif // __PICOPOST_DEF_PINS
