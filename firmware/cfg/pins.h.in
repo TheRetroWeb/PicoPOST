@@ -59,4 +59,7 @@
 #define ADC_12V_MON 2
 #define ADC_5V_MON 1
 
+#define PIN_I2C_SDA 0
+#define PIN_I2C_SCL 1
+
 #endif // __PICOPOST_DEF_PINS

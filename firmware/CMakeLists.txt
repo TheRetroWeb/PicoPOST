@@ -11,7 +11,7 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.1.0
+    VERSION 0.2.0
 )
 
 # initialize the Raspberry Pi Pico SDK
@@ -35,14 +35,14 @@ list(APPEND PROJ_INCS "${PROJECT_BINARY_DIR}/cfg")
 list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
 
 # import proj libraries
-add_subdirectory("${PROJECT_SOURCE_DIR}/lib/oled")
-list(APPEND PROJ_LIBS oled)
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/pico-ssd1306")
+list(APPEND PROJ_LIBS pico_ssd1306)
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/voltmon")
 list(APPEND PROJ_LIBS volt_mon)
 
 # finalize executable
 add_executable(pico_post_fw
-    "${PROJECT_SOURCE_DIR}/src/main.c"
+    "${PROJECT_SOURCE_DIR}/src/main.cpp"
 )
 
 pico_generate_pio_header(pico_post_fw
@@ -54,6 +54,7 @@ target_link_libraries(pico_post_fw PUBLIC
     pico_stdlib
     pico_multicore
     hardware_pio
+    hardware_i2c
     ${PROJ_LIBS}
 )
 
