@@ -7,27 +7,38 @@
 
 #include "proj.h"
 
+#include "hardware/i2c.h"
 #include "hardware/pio.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/util/queue.h"
 #include <stdio.h>
 
-#include "voltmon.h"
 #include "fastread.pio.h"
 #include "main.h"
+#include "shapeRenderer/ShapeRenderer.h"
+#include "ssd1306.h"
+#include "textRenderer/TextRenderer.h"
+#include "voltmon.h"
+
+using namespace pico_ssd1306;
 
 queue_t postList;
 static volatile bool quitLoop = false;
 static volatile uint64_t lastReset = 0;
+SSD1306* display = nullptr;
+char oldDataStr[DISPLAY_TEXT_BUFFER] = { '\0' };
+char dataStr[DISPLAY_TEXT_BUFFER] = { '\0' };
 
 void WriteSerial()
 {
     while (!quitLoop) {
         int count = queue_get_level(&postList);
         if (count > 0) {
+            
             QueueData buffer = {};
             queue_remove_blocking(&postList, &buffer);
+            fillRect(display, 0, 12, 127, 31, WriteMode::SUBTRACT);
             switch (buffer.operation) {
 
             case QO_Volts: {
@@ -38,18 +49,24 @@ void WriteSerial()
 
             case QO_Data: {
                 double tstamp = buffer.timestamp / 1000.0;
-                printf("%10.3f | %02X @ %04Xh\n",
-                    tstamp, buffer.data, buffer.address);
+                memcpy(oldDataStr, dataStr, DISPLAY_TEXT_BUFFER);
+                sprintf(dataStr, "%02X", buffer.data);
+                printf("%10.3f | %s @ %04Xh\n",
+                    tstamp, dataStr, buffer.address);
+                drawText(display, font_8x8, oldDataStr, 24, 18);
+                drawText(display, font_12x16, dataStr, 64, 12);
+                display->sendBuffer();
             } break;
 
             case QO_Reset: {
                 printf("Reset!\n");
+                drawText(display, font_12x16, "Reset!", 20, 12);
+                display->sendBuffer();
             } break;
 
             default: {
                 // do nothing
             } break;
-
             }
         }
     }
@@ -78,10 +95,11 @@ void Logic_Port80Reader()
         if (reset) {
             lastReset = time_us_64();
             QueueData qd = {
-                .operation = QO_Reset,
-                .address = 0,
-                .data = 0,
-                .timestamp = lastReset
+                QO_Reset,
+                lastReset,
+                0,
+                0,
+                0.0
             };
             queue_try_add(&postList, &qd);
         }
@@ -89,15 +107,15 @@ void Logic_Port80Reader()
         // The readout from the FIFO should look a bit like this
         // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
         fullRead = Bus_FastRead_PinImage(pio0, readerSm);
-        uint16_t addr = (fullRead & 0x0000FF00) +
-                       ((fullRead & 0xFF000000) >> 24);
+        uint16_t addr = (fullRead & 0x0000FF00) + ((fullRead & 0xFF000000) >> 24);
         if (addr == 0x0080) {
             uint8_t data = (fullRead & 0x00FF0000) >> 16;
             QueueData qd = {
-                .operation = QO_Data,
-                .address = addr,
-                .data = data,
-                .timestamp = time_us_64() - lastReset
+                QO_Data,
+                time_us_64() - lastReset,
+                addr,
+                data,
+                0.0
             };
             queue_try_add(&postList, &qd);
         }
@@ -132,7 +150,7 @@ void Logic_VoltageMonitor()
     while (!quitLoop) {
         float readFive = VoltMon_Read5();
         float readTwelve = VoltMon_Read12();
-        
+
         uint64_t tstamp = time_us_64() - lastReset;
         qd.address = 5;
         qd.timestamp = tstamp;
@@ -151,18 +169,39 @@ void Logic_VoltageMonitor()
 
 int main()
 {
+    // onboard LED shows if we're ready for operation
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, false);
-    stdio_init_all();
 
+    // Init work variables
     ProgramSelect logicSelect = PS_None;
     queue_init(&postList, sizeof(QueueData), MAX_QUEUE_LENGTH);
 
+    // Init UART output as USB CDC gadget
+    stdio_init_all();
+
+    // Init I2C bus for OLED display
+    i2c_init(i2c0, 400000); // Let's keep it reasonable @ 400 kHz
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
+
+    // Init OLED display
+    display = new SSD1306(i2c0, 0x3C, Size::W128xH32);
+
     // Greetings!
-    printf("-- PicoPOST v%d.%d.%d --\n",
-        PROJ_MAJ_VER, PROJ_MIN_VER, PROJ_CDB_VER);
+    char strVer[13] = { '\0' };
+    sprintf(strVer, "v%d.%d.%d", PROJ_MAJ_VER, PROJ_MIN_VER, PROJ_CDB_VER);
+    printf("-- PicoPOST %s --\n", strVer);
     printf("HW by fire219, SW by Zago\n");
+    drawText(display, font_12x16, "PicoPOST", 0, 0);
+    drawText(display, font_8x8, strVer, 10, 20);
+    display->sendBuffer();
+
+    sleep_ms(2000);
+    display->clear();
     gpio_put(PICO_DEFAULT_LED_PIN, true);
 
     while (1) {
@@ -175,6 +214,8 @@ int main()
         switch (logicSelect) {
 
         case PS_Port80Reader: {
+            drawText(display, font_8x8, "Port 80h", 0, 0);
+            display->sendBuffer();
             Logic_Port80Reader();
         } break;
 
@@ -185,7 +226,6 @@ int main()
         default: {
             // come again?
         } break;
-
         }
     }
 
