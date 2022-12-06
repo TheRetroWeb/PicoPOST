@@ -12,7 +12,8 @@
 // bus data in less than we can empty the serial buffer at 115200 bps
 #define MAX_QUEUE_LENGTH 512
 
-#define DISPLAY_TEXT_BUFFER 10
+#define MAX_HISTORY 5
+#define MAX_VALUE_LEN 10
 
 typedef enum __picopost_main_progselect {
     PS_None,

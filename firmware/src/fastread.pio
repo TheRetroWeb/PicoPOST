@@ -62,7 +62,6 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
     mov ISR, X
     push                        ; Block FIFO read for main program
     wait 0 pin 26               ; Wait for reset signal to transition low
-    irq clear 0                 ; Notify SM to accept incoming reset reads
     set X, 1
     mov ISR, X
     push                        ; Send a complete reset event and unlock FIFO
@@ -92,7 +91,7 @@ static inline bool Bus_FastReset_BlockingRead(PIO pio, uint sm)
         return false;
     }
 
-    io_ro_8 *rxfifo_shift = (io_ro_8*)&pio->rxf[sm] + 3;
+    io_ro_32 *rxfifo_shift = (io_ro_32*)&pio->rxf[sm];
     while ((*rxfifo_shift & 0x01) == 0) {
         tight_loop_contents();
     }

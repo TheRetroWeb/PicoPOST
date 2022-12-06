@@ -18,7 +18,7 @@
 #define PIN_ISA_D7 9
 
 /**
- * Hardware Notes!
+ * @note **Hardware Notes!**
  * 
  * Due to the limited amount of GPIO available with the RP2040 MCU, only
  * A[0..15] are being monitored by the firmware. The upper A[16..19] are

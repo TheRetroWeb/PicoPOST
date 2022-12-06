@@ -27,15 +27,20 @@ queue_t postList;
 static volatile bool quitLoop = false;
 static volatile uint64_t lastReset = 0;
 SSD1306* display = nullptr;
-char oldDataStr[DISPLAY_TEXT_BUFFER] = { '\0' };
-char dataStr[DISPLAY_TEXT_BUFFER] = { '\0' };
+char textBuffer[MAX_HISTORY][MAX_VALUE_LEN] = { '\0' };
+
+void HistoryShift()
+{
+    for (uint i = MAX_HISTORY - 1; i > 0; i--) {
+        memcpy(textBuffer[i], textBuffer[i - 1], MAX_VALUE_LEN);
+    }
+}
 
 void WriteSerial()
 {
     while (!quitLoop) {
         int count = queue_get_level(&postList);
-        if (count > 0) {
-            
+        if (count > 0) {            
             QueueData buffer = {};
             queue_remove_blocking(&postList, &buffer);
             fillRect(display, 0, 12, 127, 31, WriteMode::SUBTRACT);
@@ -49,18 +54,27 @@ void WriteSerial()
 
             case QO_Data: {
                 double tstamp = buffer.timestamp / 1000.0;
-                memcpy(oldDataStr, dataStr, DISPLAY_TEXT_BUFFER);
-                sprintf(dataStr, "%02X", buffer.data);
+                HistoryShift();
+                sprintf(textBuffer[0], "%02X", buffer.data);
                 printf("%10.3f | %s @ %04Xh\n",
-                    tstamp, dataStr, buffer.address);
-                drawText(display, font_8x8, oldDataStr, 24, 18);
-                drawText(display, font_12x16, dataStr, 64, 12);
+                    tstamp, textBuffer[0], buffer.address);
+                drawText(display, font_8x8, textBuffer[4], 0, 18);
+                drawText(display, font_8x8, textBuffer[3], 23, 18);
+                drawText(display, font_8x8, textBuffer[2], 47, 18);
+                drawText(display, font_8x8, textBuffer[1], 71, 18);
+                drawText(display, font_12x16, textBuffer[0], 96, 12);
                 display->sendBuffer();
             } break;
 
             case QO_Reset: {
+                HistoryShift();
+                sprintf(textBuffer[0], "R!");
                 printf("Reset!\n");
-                drawText(display, font_12x16, "Reset!", 20, 12);
+                drawText(display, font_8x8, textBuffer[4], 0, 18);
+                drawText(display, font_8x8, textBuffer[3], 23, 18);
+                drawText(display, font_8x8, textBuffer[2], 47, 18);
+                drawText(display, font_8x8, textBuffer[1], 71, 18);
+                drawText(display, font_12x16, textBuffer[0], 96, 12);
                 display->sendBuffer();
             } break;
 
@@ -220,6 +234,8 @@ int main()
         } break;
 
         case PS_VoltageMonitor: {
+            drawText(display, font_8x8, "Voltage monitor", 0, 0);
+            display->sendBuffer();
             Logic_VoltageMonitor();
         } break;
 
