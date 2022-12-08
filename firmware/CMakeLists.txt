@@ -11,18 +11,13 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.2.0
+    VERSION 0.3.0
 )
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 ## USER CONFIGURABLE PARAMS
-set(OLED_ADDR      0x3C)
-set(OLED_WIDTH     128)
-set(OLED_HEIGHT    32)
-set(OLED_DRAW_MODE 0x08)
-
 set(CALIBADJ_5V 1.0)
 set(CALIBADJ_12V 1.0)
 
@@ -42,6 +37,8 @@ list(APPEND PROJ_LIBS volt_mon)
 
 # finalize executable
 add_executable(pico_post_fw
+    "${PROJECT_SOURCE_DIR}/src/logic.cpp"
+    "${PROJECT_SOURCE_DIR}/src/ui.cpp"
     "${PROJECT_SOURCE_DIR}/src/main.cpp"
 )
 
@@ -53,8 +50,10 @@ pico_generate_pio_header(pico_post_fw
 target_link_libraries(pico_post_fw PUBLIC
     pico_stdlib
     pico_multicore
+    pico_time
     hardware_pio
     hardware_i2c
+    hardware_gpio
     ${PROJ_LIBS}
 )
 

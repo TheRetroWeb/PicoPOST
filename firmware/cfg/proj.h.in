@@ -19,10 +19,9 @@
 // POST code database version
 #define PROJ_CDB_VER   @pico_post_fw_VERSION_PATCH@
 
-// OLED settings
-#define OLED_ADDR         @OLED_ADDR@
-#define OLED_WIDTH        @OLED_WIDTH@
-#define OLED_HEIGHT       @OLED_HEIGHT@
-#define OLED_DRAW_MODE    @OLED_DRAW_MODE@
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#define PROJ_STR_VER   STR(PROJ_MAJ_VER) "." STR(PROJ_MIN_VER) "." STR(PROJ_CDB_VER)
 
 #endif // __PICOPOST_PROJ_CFG

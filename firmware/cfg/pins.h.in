@@ -62,4 +62,8 @@
 #define PIN_I2C_SDA 0
 #define PIN_I2C_SCL 1
 
+#define PIN_KEY_UP 20
+#define PIN_KEY_DOWN 21
+#define PIN_KEY_SELECT 22
+
 #endif // __PICOPOST_DEF_PINS

@@ -7,7 +7,7 @@ include("${PROJECT_SOURCE_DIR}/pico_sdk_import.cmake")
 
 pico_sdk_init()
 
-add_library(volt_mon voltmon.c)
+add_library(volt_mon voltmon.cpp)
 
 target_link_libraries(volt_mon pico_stdlib hardware_adc)
 

@@ -5,238 +5,251 @@
  *
  **/
 
+#include "main.hpp"
+#include "logic.hpp"
+#include "pins.h"
 #include "proj.h"
+#include "ui.hpp"
 
-#include "hardware/i2c.h"
-#include "hardware/pio.h"
+#include "hardware/gpio.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/util/queue.h"
+#include <string.h>
 #include <stdio.h>
 
-#include "fastread.pio.h"
-#include "main.h"
-#include "shapeRenderer/ShapeRenderer.h"
-#include "ssd1306.h"
-#include "textRenderer/TextRenderer.h"
-#include "voltmon.h"
+#define DEBOUNCE_RATE 3500
 
-using namespace pico_ssd1306;
+queue_t dataQueue;
 
-queue_t postList;
-static volatile bool quitLoop = false;
-static volatile uint64_t lastReset = 0;
-SSD1306* display = nullptr;
-char textBuffer[MAX_HISTORY][MAX_VALUE_LEN] = { '\0' };
+static volatile bool gotKeyIrq = false;
+static volatile uint lastKey = 0;
+static volatile uint lastKeyPressed = 0;
+static volatile uint8_t keyPress = 0x00;
+static volatile ProgramSelect logicSelect = PS_MAX_PROG;
 
-void HistoryShift()
+void Aux_ClearKeyIrq()
 {
-    for (uint i = MAX_HISTORY - 1; i > 0; i--) {
-        memcpy(textBuffer[i], textBuffer[i - 1], MAX_VALUE_LEN);
-    }
+    gotKeyIrq = false;
+    keyPress = 0x00;
 }
 
-void WriteSerial()
+void Aux_UI()
 {
-    while (!quitLoop) {
-        int count = queue_get_level(&postList);
-        if (count > 0) {            
-            QueueData buffer = {};
-            queue_remove_blocking(&postList, &buffer);
-            fillRect(display, 0, 12, 127, 31, WriteMode::SUBTRACT);
-            switch (buffer.operation) {
+    while (1) {
+        if (logicSelect != PS_MAX_PROG) {
+            uint count = queue_get_level(&dataQueue);
+            if (count > 0) {
+                QueueData buffer;
+                queue_remove_blocking(&dataQueue, &buffer);
 
-            case QO_Volts: {
-                double tstamp = buffer.timestamp / 1000.0;
-                printf("%10.3f | %2d V @ %2.3f V\n",
-                    tstamp, buffer.address, buffer.volts);
-            } break;
+                UI_PrintSerial(&buffer);
+                UI_DataOLED(&buffer);
+            }
 
-            case QO_Data: {
-                double tstamp = buffer.timestamp / 1000.0;
-                HistoryShift();
-                sprintf(textBuffer[0], "%02X", buffer.data);
-                printf("%10.3f | %s @ %04Xh\n",
-                    tstamp, textBuffer[0], buffer.address);
-                drawText(display, font_8x8, textBuffer[4], 0, 18);
-                drawText(display, font_8x8, textBuffer[3], 23, 18);
-                drawText(display, font_8x8, textBuffer[2], 47, 18);
-                drawText(display, font_8x8, textBuffer[1], 71, 18);
-                drawText(display, font_12x16, textBuffer[0], 96, 12);
-                display->sendBuffer();
-            } break;
-
-            case QO_Reset: {
-                HistoryShift();
-                sprintf(textBuffer[0], "R!");
-                printf("Reset!\n");
-                drawText(display, font_8x8, textBuffer[4], 0, 18);
-                drawText(display, font_8x8, textBuffer[3], 23, 18);
-                drawText(display, font_8x8, textBuffer[2], 47, 18);
-                drawText(display, font_8x8, textBuffer[1], 71, 18);
-                drawText(display, font_12x16, textBuffer[0], 96, 12);
-                display->sendBuffer();
-            } break;
-
-            default: {
-                // do nothing
-            } break;
+            if (gotKeyIrq) {
+                if (keyPress == (KE_Up | KE_Down)) {
+                    Aux_ClearKeyIrq();
+                    Logic_Stop();
+                    logicSelect = PS_MAX_PROG;
+                }
             }
         }
     }
 }
 
-void Logic_Port80Reader()
+int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData)
 {
-    uint resetOffset = pio_add_program(pio1, &Bus_FastReset_program);
-    uint resetSm = pio_claim_unused_sm(pio1, true);
-    Bus_FastReset_init(pio1, resetSm, resetOffset);
+    if (lastKeyPressed == 1 && !gpio_get(lastKey)) {
+        switch (lastKey) {
+        case PIN_KEY_UP: {
+            keyPress |= KE_Up;
+        } break;
 
-    uint readerOffset = pio_add_program(pio0, &Bus_FastRead_program);
-    uint readerSm = pio_claim_unused_sm(pio0, true);
-    Bus_FastRead_init(pio0, readerSm, readerOffset);
+        case PIN_KEY_DOWN: {
+            keyPress |= KE_Down;
+        } break;
 
-    uint8_t data = 0xFF;
-    uint32_t fullRead = 0x0000;
-    quitLoop = false;
-    multicore_launch_core1(WriteSerial);
-    lastReset = time_us_64();
-    while (!quitLoop) {
-        // If reset is active, this read operation blocks the loop until reset
-        // goes low. Returns true only if a proper reset pulse occurred.
-        // Returns false if no reset event is happening
-        bool reset = Bus_FastReset_BlockingRead(pio1, resetSm);
-        if (reset) {
-            lastReset = time_us_64();
-            QueueData qd = {
-                QO_Reset,
-                lastReset,
-                0,
-                0,
-                0.0
-            };
-            queue_try_add(&postList, &qd);
+        case PIN_KEY_SELECT: {
+            keyPress |= KE_Select;
+        } break;
         }
+        gotKeyIrq = true;
+    } else if (lastKeyPressed == 2 && gpio_get(lastKey)) {
+        switch (lastKey) {
+        case PIN_KEY_UP: {
+            keyPress &= ~KE_Up;
+        } break;
 
-        // The readout from the FIFO should look a bit like this
-        // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
-        fullRead = Bus_FastRead_PinImage(pio0, readerSm);
-        uint16_t addr = (fullRead & 0x0000FF00) + ((fullRead & 0xFF000000) >> 24);
-        if (addr == 0x0080) {
-            uint8_t data = (fullRead & 0x00FF0000) >> 16;
-            QueueData qd = {
-                QO_Data,
-                time_us_64() - lastReset,
-                addr,
-                data,
-                0.0
-            };
-            queue_try_add(&postList, &qd);
+        case PIN_KEY_DOWN: {
+            keyPress &= ~KE_Down;
+        } break;
+
+        case PIN_KEY_SELECT: {
+            keyPress &= ~KE_Select;
+        } break;
         }
+        gotKeyIrq = true;
     }
-
-    pio_sm_set_enabled(pio0, readerSm, false);
-    pio_sm_restart(pio0, readerSm);
-    pio_sm_unclaim(pio0, readerSm);
-    pio_remove_program(pio0, &Bus_FastRead_program, readerOffset);
-
-    pio_sm_set_enabled(pio1, resetSm, false);
-    pio_sm_restart(pio1, resetSm);
-    pio_sm_unclaim(pio1, resetSm);
-    pio_remove_program(pio1, &Bus_FastReset_program, resetOffset);
+    gpio_set_irq_enabled(lastKey, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
+    lastKey = 0;
+    lastKeyPressed = 0;
+    return 0;
 }
 
-void Logic_VoltageMonitor()
+void Aux_KeyDebounceArm(uint pin)
 {
-    gpio_init(PICO_SMPS_MODE_PIN);
-    gpio_set_dir(PICO_SMPS_MODE_PIN, GPIO_OUT);
-    gpio_put(PICO_SMPS_MODE_PIN, true);
+    lastKey = pin;
+    gpio_set_irq_enabled(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false);
+    add_alarm_in_us(DEBOUNCE_RATE, Aux_KeyDebounceRelease, nullptr, true);
+}
 
-    VoltMon_Init();
-
-    QueueData qd = {
-        .operation = QO_Volts
-    };
-    quitLoop = false;
-    multicore_launch_core1(WriteSerial);
-    lastReset = time_us_64();
-
-    while (!quitLoop) {
-        float readFive = VoltMon_Read5();
-        float readTwelve = VoltMon_Read12();
-
-        uint64_t tstamp = time_us_64() - lastReset;
-        qd.address = 5;
-        qd.timestamp = tstamp;
-        qd.volts = readFive / 1000;
-        queue_try_add(&postList, &qd);
-        qd.address = 12;
-        qd.timestamp = tstamp;
-        qd.volts = readTwelve / 1000;
-        queue_try_add(&postList, &qd);
-
-        sleep_ms(100);
+void Aux_KeyISR(uint gpio, uint32_t event_mask)
+{
+    if (lastKey == 0) {
+        if (event_mask & GPIO_IRQ_EDGE_FALL) {
+            switch (gpio) {
+            case PIN_KEY_SELECT:
+            case PIN_KEY_UP:
+            case PIN_KEY_DOWN: {
+                lastKeyPressed = 1;
+                Aux_KeyDebounceArm(gpio);
+            } break;
+            }
+        } else if (event_mask & GPIO_IRQ_EDGE_RISE) {
+            switch (gpio) {
+            case PIN_KEY_SELECT:
+            case PIN_KEY_UP:
+            case PIN_KEY_DOWN: {
+                lastKeyPressed = 2;
+                Aux_KeyDebounceArm(gpio);
+            } break;
+            }
+        }
     }
+    
+}
 
-    gpio_put(PICO_SMPS_MODE_PIN, false);
+uint8_t Aux_WaitForInput()
+{
+    gotKeyIrq = false;
+    while (!gotKeyIrq)
+        ;
+    uint8_t keys = keyPress;
+    Aux_ClearKeyIrq();
+    return keys;
 }
 
 int main()
 {
-    // onboard LED shows if we're ready for operation
+    // Initialize USB CDC serial port
+    stdio_init_all();
+
+    // Onboard LED shows if we're ready for operation
+    // Start off, turn back on when we're ready to enter main loop
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, false);
 
-    // Init work variables
-    ProgramSelect logicSelect = PS_None;
-    queue_init(&postList, sizeof(QueueData), MAX_QUEUE_LENGTH);
+    // Initialize button GPIOs and key handler routine
+    // Buttons are active low, so enable internal pull-ups
+    uint pins[] = { PIN_KEY_UP, PIN_KEY_DOWN, PIN_KEY_SELECT };
+    for (const uint pin : pins) {
+        gpio_init(pin);
+        gpio_set_dir(pin, GPIO_IN);
+        gpio_pull_up(pin);
+        gpio_set_irq_enabled_with_callback(pin,
+            GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, Aux_KeyISR);
+    }
 
-    // Init UART output as USB CDC gadget
-    stdio_init_all();
+    // Initialize data queue for async, multi-threaded data output
+    queue_init(&dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
 
-    // Init I2C bus for OLED display
-    i2c_init(i2c0, 400000); // Let's keep it reasonable @ 400 kHz
-    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(PIN_I2C_SDA);
-    gpio_pull_up(PIN_I2C_SCL);
+    // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
+    UI_InitOLED(i2c0, 400000, 0x3C);
 
-    // Init OLED display
-    display = new SSD1306(i2c0, 0x3C, Size::W128xH32);
+    // Start async, multi-threaded data output dispatcher
+    multicore_launch_core1(Aux_UI);
 
     // Greetings!
-    char strVer[13] = { '\0' };
-    sprintf(strVer, "v%d.%d.%d", PROJ_MAJ_VER, PROJ_MIN_VER, PROJ_CDB_VER);
-    printf("-- PicoPOST %s --\n", strVer);
-    printf("HW by fire219, SW by Zago\n");
-    drawText(display, font_12x16, "PicoPOST", 0, 0);
-    drawText(display, font_8x8, strVer, 10, 20);
-    display->sendBuffer();
+    QueueData qd {
+        QO_Greetings
+    };
+    UI_PrintSerial(&qd);
+    UI_DataOLED(&qd);
 
+    // Ready!
     sleep_ms(2000);
-    display->clear();
+    UI_ClearScreenOLED();
     gpio_put(PICO_DEFAULT_LED_PIN, true);
 
+    // Primary operation loop
+    /* What does it do?
+       1. Do the up-down-enter thing with the menu
+       2. Enter selected application
+       3. App will exit when an appropriate exit condition is received
+    */
+    int menuIdx = 0;
     while (1) {
-        // TODO: implement ui selection for use mode
-        // should involve oled and buttons
-        logicSelect = PS_Port80Reader;
+        logicSelect = PS_MAX_PROG;
+        while (logicSelect == PS_MAX_PROG) {
+            UI_DrawMenuOLED(menuIdx);
 
-        // pressing a certain key combo should also trigger a logic exit condition
+            uint8_t keys = Aux_WaitForInput();
+            switch (keys) {
+            case KE_Down: {
+                if (menuIdx < PS_MAX_PROG - 1)
+                    menuIdx++;
+            } break;
+
+            case KE_Up: {
+                if (menuIdx > 0)
+                    menuIdx--;
+            } break;
+
+            case KE_Select: {
+                // Direct cast from int to ProgramSelect. EWW!
+                logicSelect = (ProgramSelect)menuIdx;
+            } break;
+            }
+        }
+
+        UI_ClearScreenOLED();
 
         switch (logicSelect) {
 
         case PS_Port80Reader: {
-            drawText(display, font_8x8, "Port 80h", 0, 0);
-            display->sendBuffer();
-            Logic_Port80Reader();
+            UI_SetHeaderOLED("Port 80h");
+            Logic_Port80Reader(&dataQueue);
+            UI_ClearBuffers();
         } break;
 
         case PS_VoltageMonitor: {
-            drawText(display, font_8x8, "Voltage monitor", 0, 0);
-            display->sendBuffer();
-            Logic_VoltageMonitor();
+            UI_SetHeaderOLED("Voltage monitor");
+            Logic_VoltageMonitor(&dataQueue);
+            UI_ClearBuffers();
+        } break;
+
+        case PS_Info: {
+            UI_SetHeaderOLED("PicoPOST " PROJ_STR_VER);
+            uint startIdx = 0;
+            char creditsBlock[20] = { '\0' };
+            const size_t lineLength = strlen(creditsLine);
+            while (logicSelect == PS_Info) {
+                size_t blockLength = MIN(19, lineLength - startIdx);
+                memcpy(creditsBlock, creditsLine + startIdx, blockLength);
+                if (startIdx > (lineLength - 19)) {
+                    memset(creditsBlock + blockLength, '\0', lineLength - startIdx);
+                }
+                UI_SetTextOLED(creditsBlock);
+                startIdx++;
+                if (startIdx == lineLength) {
+                    startIdx = 0;
+                    sleep_ms(1000);
+                } else {
+                    sleep_ms(300);
+                }
+            }
         } break;
 
         default: {
