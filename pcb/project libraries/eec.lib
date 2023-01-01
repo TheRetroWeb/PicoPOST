@@ -1,0 +1,57 @@
+EESchema-LIBRARY Version 2.4
+#encoding utf-8
+#
+# Molex 47080-4001
+#
+DEF 47080-4001 J 0 0 Y Y 1 L N
+F0 "J" 0 300 50 H V L CNN 
+F1 "47080-4001" 0 400 50 H V L CNN 
+F2 "Molex-47080-4001-0-0-*" 0 500 50 H I L CNN 
+F3 "https://www.molex.com/pdm_docs/sd/470804001_sd.pdf" 0 600 50 H I L CNN 
+F4 "Conn" 0 700 50 H I L CNN "category"
+F5 "CONN SATA PLUG 7POS SMD R/A" 0 800 50 H I L CNN "digikey description"
+F6 "WM4279CT-ND" 0 900 50 H I L CNN "digikey part number"
+F7 "yes" 0 1000 50 H I L CNN "is connector"
+F8 "yes" 0 1100 50 H I L CNN "is female"
+F9 "yes" 0 1200 50 H I L CNN "lead free"
+F10 "a4f6e00a33a7a374" 0 1300 50 H I L CNN "library id"
+F11 "Molex" 0 1400 50 H I L CNN "manufacturer"
+F12 "I/O Connectors SATA SYSTEM PLUG R/A SMT TYPE" 0 1500 50 H I L CNN "mouser description"
+F13 "538-47080-4001" 0 1600 50 H I L CNN "mouser part number"
+F14 "CONN_SMT" 0 1700 50 H I L CNN "package"
+F15 "yes" 0 1800 50 H I L CNN "rohs"
+F16 "+85°C" 0 1900 50 H I L CNN "temperature range high"
+F17 "-35°C" 0 2000 50 H I L CNN "temperature range low"
+DRAW
+X 1 1 -100 0 100 L 40 40 1 1 U 
+X 2 2 -100 -200 100 L 40 40 1 1 U 
+X 3 3 -100 -400 100 L 40 40 1 1 U 
+X 4 4 -100 -600 100 L 40 40 1 1 U 
+X 5 5 -100 -800 100 L 40 40 1 1 U 
+X 6 6 -100 -1000 100 L 40 40 1 1 U 
+X 7 7 -100 -1200 100 L 40 40 1 1 U 
+X MNT_1 8 -100 -1400 100 L 40 40 1 1 U 
+X MNT_2 9 -100 -1600 100 L 40 40 1 1 U 
+S -700 200 -200 -1800 1 1 0 f
+C -450 0 30 1 1 0 N
+P 2 1 1 0 -420 0 -200 0 N
+C -450 -200 30 1 1 0 N
+P 2 1 1 0 -420 -200 -200 -200 N
+C -450 -400 30 1 1 0 N
+P 2 1 1 0 -420 -400 -200 -400 N
+C -450 -600 30 1 1 0 N
+P 2 1 1 0 -420 -600 -200 -600 N
+C -450 -800 30 1 1 0 N
+P 2 1 1 0 -420 -800 -200 -800 N
+C -450 -1000 30 1 1 0 N
+P 2 1 1 0 -420 -1000 -200 -1000 N
+C -450 -1200 30 1 1 0 N
+P 2 1 1 0 -420 -1200 -200 -1200 N
+C -450 -1400 30 1 1 0 N
+P 2 1 1 0 -420 -1400 -200 -1400 N
+C -450 -1600 30 1 1 0 N
+P 2 1 1 0 -420 -1600 -200 -1600 N
+ENDDRAW
+ENDDEF
+#
+# End Library
