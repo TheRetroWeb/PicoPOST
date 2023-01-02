@@ -7,12 +7,13 @@
 #include "pins.h"
 #include "proj.h"
 #include "shapeRenderer/ShapeRenderer.h"
-#include "ssd1306.h"
+#include "ssd1306.hpp"
+#include "sh1106.hpp"
 #include "textRenderer/TextRenderer.h"
 
-using namespace pico_ssd1306;
+using namespace pico_oled;
 
-SSD1306* display = nullptr;
+OLED* display = nullptr;
 char textBuffer[MAX_HISTORY][MAX_VALUE_LEN] = { '\0' };
 
 static const char menuItem[PS_MAX_PROG][15] = {
@@ -61,7 +62,7 @@ void UI_PrintSerial(QueueData* buffer)
     }
 }
 
-void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address)
+void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address, uint8_t displayType, uint8_t displaySize)
 {
     // Init I2C bus for OLED display
     i2c_init(busInstance, clockRate);
@@ -71,7 +72,22 @@ void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address)
     gpio_pull_up(PIN_I2C_SCL);
 
     // Init OLED display
-    display = new SSD1306(busInstance, address, Size::W128xH32);
+    auto dispSize = Size::W128xH32;
+    switch (displaySize) {
+        default: {
+            dispSize = Size::W128xH32;
+        } break;
+
+        case 1: {
+            dispSize = Size::W128xH64;
+        } break;
+    }
+
+    if (displayType == 0) {
+        display = new SSD1306(busInstance, address, dispSize);
+    } else if (displayType == 1) {
+        display = new SH1106(busInstance, address, dispSize);
+    }
 }
 
 void UI_DataOLED(QueueData* buffer)

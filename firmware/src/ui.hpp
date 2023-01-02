@@ -15,7 +15,7 @@
 
 void UI_PrintSerial(QueueData* buffer);
 
-void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address);
+void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address, uint8_t displayType = 0, uint8_t displaySize = 0);
 
 void UI_DataOLED(QueueData* buffer);
 
