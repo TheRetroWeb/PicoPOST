@@ -34,6 +34,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/lib/pico-oled")
 list(APPEND PROJ_LIBS pico_oled)
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/voltmon")
 list(APPEND PROJ_LIBS volt_mon)
+add_subdirectory("${PROJECT_SOURCE_DIR}/lib/gpioexp")
+list(APPEND PROJ_LIBS gpio_exp)
 
 # finalize executable
 add_executable(pico_post_fw
@@ -59,6 +61,10 @@ target_link_libraries(pico_post_fw PUBLIC
 
 pico_enable_stdio_usb(pico_post_fw 1)
 pico_enable_stdio_uart(pico_post_fw 0)
+
+target_compile_definitions(pico_post_fw PRIVATE
+    PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
+)
 
 # find includes
 target_include_directories(pico_post_fw PUBLIC

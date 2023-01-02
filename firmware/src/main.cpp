@@ -6,27 +6,51 @@
  **/
 
 #include "main.hpp"
-#include "logic.hpp"
+
+// Accessory libs
+#include "gpioexp.hpp"
+#include "sh1106.hpp"
+#include "ssd1306.hpp"
+
+// General utilites
 #include "pins.h"
 #include "proj.h"
+
+// Primary functions
+#include "logic.hpp"
 #include "ui.hpp"
 
+// System libs
 #include "hardware/gpio.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/util/queue.h"
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
-#define DEBOUNCE_RATE 3500
+#define DEBOUNCE_RATE 3500 // 3.5ms debounce
+#define I2C_CLK_RATE 400000 // Conservative 400 kHz I2C
+
+enum UserMode {
+    UM_I2CKeypad, // PCB rev6 + I2C remote
+    UM_GPIOKeypad, // PCB rev5 + I2C/GPIO remote
+    UM_Serial, // PCB rev? + no remote
+
+    UM_Invalid, // Useless
+};
 
 queue_t dataQueue;
+
+MCP23009* gpioexp = nullptr;
+pico_oled::OLED* oled = nullptr;
+UserInterface* ui = nullptr;
 
 static volatile bool gotKeyIrq = false;
 static volatile uint lastKey = 0;
 static volatile uint lastKeyPressed = 0;
 static volatile uint8_t keyPress = 0x00;
 static volatile ProgramSelect logicSelect = PS_MAX_PROG;
+static volatile UserMode hwUserMode = UM_I2CKeypad;
 
 void Aux_ClearKeyIrq()
 {
@@ -42,16 +66,22 @@ void Aux_UI()
             if (count > 0) {
                 QueueData buffer;
                 queue_remove_blocking(&dataQueue, &buffer);
-
-                UI_PrintSerial(&buffer);
-                UI_DataOLED(&buffer);
+                ui->NewData(&buffer);
             }
 
             if (gotKeyIrq) {
-                if (keyPress == (KE_Up | KE_Down)) {
-                    Aux_ClearKeyIrq();
-                    Logic_Stop();
-                    logicSelect = PS_MAX_PROG;
+                if (hwUserMode == UM_I2CKeypad) {
+                    if (keyPress & KE_Back) {
+                        Aux_ClearKeyIrq();
+                        Logic_Stop();
+                        logicSelect = PS_MAX_PROG;
+                    }
+                } else if (hwUserMode == UM_GPIOKeypad) {
+                    if (keyPress == (KE_Up | KE_Down)) {
+                        Aux_ClearKeyIrq();
+                        Logic_Stop();
+                        logicSelect = PS_MAX_PROG;
+                    }
                 }
             }
         }
@@ -60,38 +90,60 @@ void Aux_UI()
 
 int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData)
 {
-    if (lastKeyPressed == 1 && !gpio_get(lastKey)) {
-        switch (lastKey) {
-        case PIN_KEY_UP: {
-            keyPress |= KE_Up;
-        } break;
-
-        case PIN_KEY_DOWN: {
-            keyPress |= KE_Down;
-        } break;
-
-        case PIN_KEY_SELECT: {
-            keyPress |= KE_Select;
-        } break;
+    if (hwUserMode == UM_I2CKeypad) {
+        if (lastKeyPressed == 1) {
+            auto maskRead = gpioexp->GetAll();
+            if (lastKey & maskRead) {
+                if (maskRead && (1 << GPIOEXP_KEY_UP)) {
+                    keyPress |= KE_Up;
+                }
+                if (maskRead && (1 << GPIOEXP_KEY_DOWN)) {
+                    keyPress |= KE_Down;
+                }
+                if (maskRead && (1 << GPIOEXP_KEY_SELECT)) {
+                    keyPress |= KE_Select;
+                }
+                if (maskRead && (1 << GPIOEXP_KEY_BACK)) {
+                    keyPress |= KE_Back;
+                }
+                gotKeyIrq = true;
+            }
         }
-        gotKeyIrq = true;
-    } else if (lastKeyPressed == 2 && gpio_get(lastKey)) {
-        switch (lastKey) {
-        case PIN_KEY_UP: {
-            keyPress &= ~KE_Up;
-        } break;
+        gpio_set_irq_enabled(PIN_REMOTE_IRQ_R6, GPIO_IRQ_EDGE_FALL, true);
+    } else if (hwUserMode == UM_GPIOKeypad) {
+        if (lastKeyPressed == 1 && !gpio_get(lastKey)) {
+            switch (lastKey) {
+            case PIN_KEY_UP_R5: {
+                keyPress |= KE_Up;
+            } break;
 
-        case PIN_KEY_DOWN: {
-            keyPress &= ~KE_Down;
-        } break;
+            case PIN_KEY_DOWN_R5: {
+                keyPress |= KE_Down;
+            } break;
 
-        case PIN_KEY_SELECT: {
-            keyPress &= ~KE_Select;
-        } break;
+            case PIN_KEY_SELECT_R5: {
+                keyPress |= KE_Select;
+            } break;
+            }
+            gotKeyIrq = true;
+        } else if (lastKeyPressed == 2 && gpio_get(lastKey)) {
+            switch (lastKey) {
+            case PIN_KEY_UP_R5: {
+                keyPress &= ~KE_Up;
+            } break;
+
+            case PIN_KEY_DOWN_R5: {
+                keyPress &= ~KE_Down;
+            } break;
+
+            case PIN_KEY_SELECT_R5: {
+                keyPress &= ~KE_Select;
+            } break;
+            }
+            gotKeyIrq = true;
         }
-        gotKeyIrq = true;
+        gpio_set_irq_enabled(lastKey, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
     }
-    gpio_set_irq_enabled(lastKey, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
     lastKey = 0;
     lastKeyPressed = 0;
     return 0;
@@ -99,35 +151,50 @@ int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData)
 
 void Aux_KeyDebounceArm(uint pin)
 {
-    lastKey = pin;
-    gpio_set_irq_enabled(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false);
+    if (hwUserMode == UM_I2CKeypad) {
+        gpio_set_irq_enabled(PIN_REMOTE_IRQ_R6, GPIO_IRQ_EDGE_FALL, false);
+    } else if (hwUserMode == UM_GPIOKeypad) {
+        lastKey = pin;
+        gpio_set_irq_enabled(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false);
+    }
     add_alarm_in_us(DEBOUNCE_RATE, Aux_KeyDebounceRelease, nullptr, true);
 }
 
 void Aux_KeyISR(uint gpio, uint32_t event_mask)
 {
     if (lastKey == 0) {
-        if (event_mask & GPIO_IRQ_EDGE_FALL) {
-            switch (gpio) {
-            case PIN_KEY_SELECT:
-            case PIN_KEY_UP:
-            case PIN_KEY_DOWN: {
-                lastKeyPressed = 1;
-                Aux_KeyDebounceArm(gpio);
-            } break;
+        if (hwUserMode == UM_I2CKeypad) {
+            if (event_mask & GPIO_IRQ_EDGE_FALL) {
+                switch (gpio) {
+                case PIN_REMOTE_IRQ_R6: {
+                    lastKeyPressed = 1;
+                    lastKey = gpioexp->GetInterruptFlag();
+                    Aux_KeyDebounceArm(1);
+                } break;
+                }
             }
-        } else if (event_mask & GPIO_IRQ_EDGE_RISE) {
-            switch (gpio) {
-            case PIN_KEY_SELECT:
-            case PIN_KEY_UP:
-            case PIN_KEY_DOWN: {
-                lastKeyPressed = 2;
-                Aux_KeyDebounceArm(gpio);
-            } break;
+        } else if (hwUserMode == UM_GPIOKeypad) {
+            if (event_mask & GPIO_IRQ_EDGE_FALL) {
+                switch (gpio) {
+                case PIN_KEY_SELECT_R5:
+                case PIN_KEY_UP_R5:
+                case PIN_KEY_DOWN_R5: {
+                    lastKeyPressed = 1;
+                    Aux_KeyDebounceArm(gpio);
+                } break;
+                }
+            } else if (event_mask & GPIO_IRQ_EDGE_RISE) {
+                switch (gpio) {
+                case PIN_KEY_SELECT_R5:
+                case PIN_KEY_UP_R5:
+                case PIN_KEY_DOWN_R5: {
+                    lastKeyPressed = 2;
+                    Aux_KeyDebounceArm(gpio);
+                } break;
+                }
             }
         }
     }
-    
 }
 
 uint8_t Aux_WaitForInput()
@@ -140,10 +207,10 @@ uint8_t Aux_WaitForInput()
     return keys;
 }
 
-int main()
+void Aux_SysInit()
 {
-    // Initialize USB CDC serial port
-    stdio_init_all();
+    // Initialize data queue for async, multi-threaded data output
+    queue_init(&dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
 
     // Onboard LED shows if we're ready for operation
     // Start off, turn back on when we're ready to enter main loop
@@ -151,38 +218,108 @@ int main()
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, false);
 
-    // Initialize button GPIOs and key handler routine
-    // Buttons are active low, so enable internal pull-ups
-    uint pins[] = { PIN_KEY_UP, PIN_KEY_DOWN, PIN_KEY_SELECT };
-    for (const uint pin : pins) {
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_IN);
-        gpio_pull_up(pin);
-        gpio_set_irq_enabled_with_callback(pin,
-            GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, Aux_KeyISR);
+    // Initialize USB CDC serial port
+    bool usb = stdio_usb_init();
+
+    // Init I2C bus for remote
+    i2c_init(i2c0, I2C_CLK_RATE);
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
+
+    // Init and config GPIO expander
+    printf("Looking for MCP23009... ");
+    gpioexp = new MCP23009(i2c0, 0x40);
+    if (gpioexp->IsConnected()) {
+        hwUserMode = UM_I2CKeypad;
+        gpioexp->Config(true, false, true, false);
+        gpioexp->SetDirection(GPIOEXP_CFG_PINDIR);
+        gpioexp->SetPolarity(GPIOEXP_CFG_PINPOL);
+        gpioexp->SetInterruptSource(GPIOEXP_CFG_PINIRQ);
+        gpioexp->SetReferenceState(0x00);
+        gpioexp->SetInterruptEvent(GPIOEXP_CFG_PINIRQ);
+        gpioexp->SetPullUps(GPIOEXP_CFG_PINPOL);
+
+        printf("GPIO Exp OK! -> Assuming PCB rev6\n");
+
+        // Initialize button IRQ and debounced key readout routine
+        gpio_init(PIN_REMOTE_IRQ_R6);
+        gpio_set_dir(PIN_REMOTE_IRQ_R6, GPIO_IN);
+        gpio_pull_up(PIN_REMOTE_IRQ_R6);
+        gpio_set_irq_enabled_with_callback(PIN_REMOTE_IRQ_R6, GPIO_IRQ_EDGE_FALL, true, Aux_KeyISR);
+    } else {
+        delete gpioexp;
+        hwUserMode = UM_GPIOKeypad;
+
+        printf("GPIO Exp KO! -> Assuming PCB rev5\n");
+
+        // Initialize button GPIOs and key handler routine
+        // Buttons are active low, so enable internal pull-ups
+        uint pins[] = { PIN_KEY_UP_R5, PIN_KEY_DOWN_R5, PIN_KEY_SELECT_R5 };
+        for (const uint pin : pins) {
+            gpio_init(pin);
+            gpio_set_dir(pin, GPIO_IN);
+            gpio_pull_up(pin);
+            gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, Aux_KeyISR);
+        }
     }
 
-    // Initialize data queue for async, multi-threaded data output
-    queue_init(&dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
-
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
-    // TODO: read from GPIO expander bits [5..7] for display config
-    UI_InitOLED(i2c0, 400000, 0x3C, 0, 0);
+    bool dispType = false, dispSize = false, dispFlip = false;
+    pico_oled::Size libOledSize = pico_oled::Size::W128xH32;
+    if (hwUserMode == UM_I2CKeypad) {
+        auto gpioConfig = gpioexp->GetAll();
+        dispType = gpioConfig && (1 << GPIOEXP_IN_DISPTYPE);
+        dispSize = gpioConfig && (1 << GPIOEXP_IN_DISPSIZE);
+        dispFlip = gpioConfig && (1 << GPIOEXP_IN_DISPROT);
+    }
+    if (dispSize) {
+        libOledSize = pico_oled::Size::W128xH64;
+    }
+    printf("Looking for OLED display... ");
+    if (dispType) {
+        oled = new pico_oled::SH1106(i2c0, 0x3C, libOledSize);
+    } else {
+        oled = new pico_oled::SSD1306(i2c0, 0x3C, libOledSize);
+    }
+    if (oled->IsConnected()) {
+        if (dispType) {
+            printf("OLED OK! -> Found SH1106\n");
+        } else {
+            printf("OLED OK! -> Found SSD1306\n");
+        }
+        oled->setOrientation(dispFlip);
+    } else {
+        delete oled;
+        oled = nullptr;
+        hwUserMode = UM_Serial;
+        printf("OLED KO! -> Falling back to USB ACM\n");
+    }
+
+    ui = new UserInterface(oled, libOledSize);
 
     // Start async, multi-threaded data output dispatcher
     multicore_launch_core1(Aux_UI);
-
-    // Greetings!
-    QueueData qd {
-        QO_Greetings
-    };
-    UI_PrintSerial(&qd);
-    UI_DataOLED(&qd);
-
-    // Ready!
-    sleep_ms(2000);
-    UI_ClearScreenOLED();
+    ui->ClearScreen();
     gpio_put(PICO_DEFAULT_LED_PIN, true);
+
+    if (hwUserMode == UM_Serial && !stdio_usb_connected()) {
+        int retry = 5;
+        while (!stdio_usb_connected() && retry > 0) {
+            stdio_usb_init();
+            sleep_ms(100);
+            retry--;
+        }
+        if (!stdio_usb_connected()) {
+            hwUserMode = UM_Invalid;
+        }
+    }
+}
+
+int main()
+{
+    Aux_SysInit();
 
     // Primary operation loop
     /* What does it do?
@@ -190,72 +327,83 @@ int main()
        2. Enter selected application
        3. App will exit when an appropriate exit condition is received
     */
-    int menuIdx = 0;
-    while (1) {
-        logicSelect = PS_MAX_PROG;
-        while (logicSelect == PS_MAX_PROG) {
-            UI_DrawMenuOLED(menuIdx);
-
-            uint8_t keys = Aux_WaitForInput();
-            switch (keys) {
-            case KE_Down: {
-                if (menuIdx < PS_MAX_PROG - 1)
-                    menuIdx++;
-            } break;
-
-            case KE_Up: {
-                if (menuIdx > 0)
-                    menuIdx--;
-            } break;
-
-            case KE_Select: {
-                // Direct cast from int to ProgramSelect. EWW!
-                logicSelect = (ProgramSelect)menuIdx;
-            } break;
-            }
+    if (hwUserMode == UM_Invalid) {
+        while (1) {
+            gpio_put(PICO_DEFAULT_LED_PIN, true);
+            sleep_ms(250);
+            gpio_put(PICO_DEFAULT_LED_PIN, false);
+            sleep_ms(250);
         }
+    } else if (hwUserMode == UM_Serial) {
+        Logic_Port80Reader(&dataQueue);
+    } else {
+        int menuIdx = 0;
+        while (1) {
+            logicSelect = PS_MAX_PROG;
+            while (logicSelect == PS_MAX_PROG) {
+                ui->DrawMenu(menuIdx);
 
-        UI_ClearScreenOLED();
+                uint8_t keys = Aux_WaitForInput();
+                switch (keys) {
+                case KE_Down: {
+                    if (menuIdx < PS_MAX_PROG - 1)
+                        menuIdx++;
+                } break;
 
-        switch (logicSelect) {
+                case KE_Up: {
+                    if (menuIdx > 0)
+                        menuIdx--;
+                } break;
 
-        case PS_Port80Reader: {
-            UI_SetHeaderOLED("Port 80h");
-            Logic_Port80Reader(&dataQueue);
-            UI_ClearBuffers();
-        } break;
-
-        case PS_VoltageMonitor: {
-            UI_SetHeaderOLED("Voltage monitor");
-            Logic_VoltageMonitor(&dataQueue);
-            UI_ClearBuffers();
-        } break;
-
-        case PS_Info: {
-            UI_SetHeaderOLED("PicoPOST " PROJ_STR_VER);
-            uint startIdx = 0;
-            char creditsBlock[20] = { '\0' };
-            const size_t lineLength = strlen(creditsLine);
-            while (logicSelect == PS_Info) {
-                size_t blockLength = MIN(19, lineLength - startIdx);
-                memcpy(creditsBlock, creditsLine + startIdx, blockLength);
-                if (startIdx > (lineLength - 19)) {
-                    memset(creditsBlock + blockLength, '\0', lineLength - startIdx);
-                }
-                UI_SetTextOLED(creditsBlock);
-                startIdx++;
-                if (startIdx == lineLength) {
-                    startIdx = 0;
-                    sleep_ms(1000);
-                } else {
-                    sleep_ms(300);
+                case KE_Select: {
+                    // Direct cast from int to ProgramSelect. EWW!
+                    logicSelect = (ProgramSelect)menuIdx;
+                } break;
                 }
             }
-        } break;
 
-        default: {
-            // come again?
-        } break;
+            ui->ClearScreen();
+
+            switch (logicSelect) {
+
+            case PS_Port80Reader: {
+                ui->DrawHeader("Port 80h");
+                Logic_Port80Reader(&dataQueue);
+            } break;
+
+            case PS_VoltageMonitor: {
+                ui->DrawHeader("Voltage monitor");
+                Logic_VoltageMonitor(&dataQueue);
+            } break;
+
+            case PS_Info: {
+                ui->DrawHeader("PicoPOST " PROJ_STR_VER);
+                uint startIdx = 0;
+                char creditsBlock[20] = { '\0' };
+                const size_t lineLength = strlen(creditsLine);
+                while (logicSelect == PS_Info) {
+                    size_t blockLength = MIN(19, lineLength - startIdx);
+                    memcpy(creditsBlock, creditsLine + startIdx, blockLength);
+                    if (startIdx > (lineLength - 19)) {
+                        memset(creditsBlock + blockLength, '\0', lineLength - startIdx);
+                    }
+                    ui->DrawFooter(creditsBlock);
+                    startIdx++;
+                    if (startIdx == lineLength) {
+                        startIdx = 0;
+                        sleep_ms(1000);
+                    } else {
+                        sleep_ms(300);
+                    }
+                }
+            } break;
+
+            default: {
+                // come again?
+            } break;
+            }
+
+            ui->ClearBuffers();
         }
     }
 

@@ -1,101 +1,91 @@
 #include "ui.hpp"
-
-#include "hardware/gpio.h"
-#include <stdio.h>
-
 #include "bitmaps.hpp"
+#include "hardware/gpio.h"
 #include "pins.h"
 #include "proj.h"
 #include "shapeRenderer/ShapeRenderer.h"
-#include "ssd1306.hpp"
-#include "sh1106.hpp"
 #include "textRenderer/TextRenderer.h"
+#include <stdio.h>
 
 using namespace pico_oled;
 
-OLED* display = nullptr;
-char textBuffer[MAX_HISTORY][MAX_VALUE_LEN] = { '\0' };
-
-static const char menuItem[PS_MAX_PROG][15] = {
-    { "Port 80h" },
-    { "Voltage rails" },
-    { "Info" }
+const std::vector<MenuEntry> UserInterface::s_mainMenu = {
+    { PS_Port80Reader, "Port 80h" },
+    { PS_VoltageMonitor, "Voltage rails" },
+    { PS_Info, "Info" }
 };
 
-void HistoryShift()
+UserInterface::UserInterface(OLED* display, Size dispSize)
 {
-    for (uint i = MAX_HISTORY - 1; i > 0; i--) {
-        memcpy(textBuffer[i], textBuffer[i - 1], MAX_VALUE_LEN);
+    this->display = display;
+    this->dispSize = dispSize;
+
+    this->currentMenu = s_mainMenu;
+}
+
+void UserInterface::ClearScreen()
+{
+    if (display != nullptr) {
+        display->clear();
+        display->sendBuffer();
     }
 }
 
-void UI_PrintSerial(QueueData* buffer)
+void UserInterface::DrawHeader(OLEDLine content)
+{
+    if (display != nullptr) {
+        fillRect(display, 0, 0, 127, 10, WriteMode::SUBTRACT);
+        drawText(display, font_8x8, content, 1, 0);
+        drawLine(display, 0, 10, 90, 10);
+        display->sendBuffer();
+    }
+}
+
+void UserInterface::DrawFooter(OLEDLine content)
+{
+    if (display != nullptr) {
+        fillRect(display, 0, 12, 127, 31, WriteMode::SUBTRACT);
+        drawText(display, font_8x8, content, 2, 18);
+        display->sendBuffer();
+    }
+}
+
+void UserInterface::SetMenuContext(const std::vector<MenuEntry>& menu)
+{
+    currentMenu = menu;
+}
+
+void UserInterface::DrawMenu(uint index)
+{
+    if (display != nullptr) {
+        display->clear();
+
+        if (index > 0) {
+            drawText(display, font_8x8, currentMenu.at(index - 1).second, 2, 2);
+            display->addBitmapImage(118, 0, bmp_arrowUp.width,
+                bmp_arrowUp.height, bmp_arrowUp.image);
+        }
+
+        drawText(display, font_8x8, currentMenu.at(index).second, 2, 12);
+        drawRect(display, 0, 10, 116, 20);
+
+        if (index < PS_MAX_PROG - 1) {
+            drawText(display, font_8x8, currentMenu.at(index + 1).second, 2, 22);
+            display->addBitmapImage(118, 23, bmp_arrowDown.width,
+                bmp_arrowDown.height, bmp_arrowDown.image);
+        }
+
+        display->sendBuffer();
+    }
+}
+
+void UserInterface::NewData(const QueueData* buffer)
 {
     if (buffer != nullptr) {
         double tstamp = buffer->timestamp / 1000.0;
 
-        switch (buffer->operation) {
-
-        case QO_Greetings: {
-            printf("-- PicoPOST " PROJ_STR_VER " --\n");
-            printf("%s\n", creditsLine);
-        } break;
-
-        case QO_Volts: {
-            printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f\n",
-                tstamp, buffer->volts5, buffer->volts12);
-        } break;
-
-        case QO_P80Data: {
-            printf("%10.3f | %02X @ %04Xh\n",
-                tstamp, buffer->data, buffer->address);
-        } break;
-
-        case QO_P80Reset: {
-            printf("Reset!\n");
-        } break;
-
-        default: {
-            // do nothing
-        } break;
-        }
-    }
-}
-
-void UI_InitOLED(i2c_inst_t* busInstance, uint clockRate, uint8_t address, uint8_t displayType, uint8_t displaySize)
-{
-    // Init I2C bus for OLED display
-    i2c_init(busInstance, clockRate);
-    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(PIN_I2C_SDA);
-    gpio_pull_up(PIN_I2C_SCL);
-
-    // Init OLED display
-    auto dispSize = Size::W128xH32;
-    switch (displaySize) {
-        default: {
-            dispSize = Size::W128xH32;
-        } break;
-
-        case 1: {
-            dispSize = Size::W128xH64;
-        } break;
-    }
-
-    if (displayType == 0) {
-        display = new SSD1306(busInstance, address, dispSize);
-    } else if (displayType == 1) {
-        display = new SH1106(busInstance, address, dispSize);
-    }
-}
-
-void UI_DataOLED(QueueData* buffer)
-{
-    if (buffer != nullptr) {
-        if (display == nullptr) {
-            panic("FATAL: Can't draw to uninitialized display!");
-        } else {
+        // OLED data handler
+        if (display != nullptr) {
             bool refresh = true;
             switch (buffer->operation) {
 
@@ -145,69 +135,44 @@ void UI_DataOLED(QueueData* buffer)
                 display->sendBuffer();
             }
         }
-    }
-}
 
-void UI_SetHeaderOLED(const char* line)
-{
-    if (display == nullptr) {
-        panic("FATAL: Can't draw to uninitialized display!");
-    } else {
-        fillRect(display, 0, 0, 127, 10, WriteMode::SUBTRACT);
-        drawText(display, font_8x8, line, 1, 0);
-        drawLine(display, 0, 10, 90, 10);
-        display->sendBuffer();
-    }
-}
+        // USB ACM serial output
+        switch (buffer->operation) {
 
-void UI_ClearScreenOLED()
-{
-    if (display == nullptr) {
-        panic("FATAL: Can't clear uninitialized display!");
-    } else {
-        display->clear();
-        display->sendBuffer();
-    }
-}
+        case QO_Greetings: {
+            printf("-- PicoPOST " PROJ_STR_VER " --\n");
+            printf("%s\n", creditsLine);
+        } break;
 
-void UI_DrawMenuOLED(uint index)
-{
-    if (display == nullptr) {
-        panic("FATAL: Can't draw to uninitialized display!");
-    } else {
-        display->clear();
+        case QO_Volts: {
+            printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f\n",
+                tstamp, buffer->volts5, buffer->volts12);
+        } break;
 
-        if (index > 0) {
-            drawText(display, font_8x8, menuItem[index - 1], 2, 2);
-            display->addBitmapImage(118, 0, bmp_arrowUp.width,
-                bmp_arrowUp.height, bmp_arrowUp.image);
+        case QO_P80Data: {
+            printf("%10.3f | %02X @ %04Xh\n",
+                tstamp, buffer->data, buffer->address);
+        } break;
+
+        case QO_P80Reset: {
+            printf("Reset!\n");
+        } break;
+
+        default: {
+            // do nothing
+        } break;
         }
-
-        drawText(display, font_8x8, menuItem[index], 2, 12);
-        drawRect(display, 0, 10, 116, 20);
-
-        if (index < PS_MAX_PROG - 1) {
-            drawText(display, font_8x8, menuItem[index + 1], 2, 22);
-            display->addBitmapImage(118, 23, bmp_arrowDown.width,
-                bmp_arrowDown.height, bmp_arrowDown.image);
-        }
-
-        display->sendBuffer();
     }
 }
 
-void UI_SetTextOLED(const char* line)
-{
-    if (display == nullptr) {
-        panic("FATAL: Can't draw to uninitialized display!");
-    } else {
-        fillRect(display, 0, 12, 127, 31, WriteMode::SUBTRACT);
-        drawText(display, font_8x8, line, 2, 18);
-        display->sendBuffer();
-    }
-}
-
-void UI_ClearBuffers()
+void UserInterface::ClearBuffers()
 {
     memset(textBuffer, '\0', sizeof(textBuffer));
+}
+
+void UserInterface::HistoryShift()
+{
+    for (uint i = MAX_HISTORY - 1; i > 0; i--) {
+        memcpy(textBuffer[i], textBuffer[i - 1], MAX_VALUE_LEN);
+    }
 }

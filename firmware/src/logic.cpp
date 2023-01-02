@@ -14,7 +14,7 @@ void Logic_Stop()
     quitLoop = true;
 }
 
-void Logic_Port80Reader(queue_t* list)
+void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress)
 {
     uint resetOffset = pio_add_program(pio1, &Bus_FastReset_program);
     uint resetSm = pio_claim_unused_sm(pio1, true);
@@ -46,7 +46,7 @@ void Logic_Port80Reader(queue_t* list)
             fullRead = Bus_FastRead_PinImage(pio0, readerSm, &quitLoop);
             uint16_t addr = (fullRead & 0x0000FF00) +
                 ((fullRead & 0xFF000000) >> 24);
-            if (addr == 0x0080) {
+            if (addr == baseAddress) {
                 uint8_t data = (fullRead & 0x00FF0000) >> 16;
                 qd.operation = QO_P80Data;
                 qd.timestamp = time_us_64() - lastReset;

@@ -5,9 +5,11 @@
 
 typedef enum __picopost_common_phykeys {
     KE_None = 0x00,
+    
     KE_Up = 0x01,
     KE_Down = 0x02,
-    KE_Select = 0x04
+    KE_Select = 0x04,
+    KE_Back = 0x08,
 } Key;
 
 /**
