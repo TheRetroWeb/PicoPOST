@@ -17,7 +17,7 @@
 
 void Aux_UI();
 
-void Aux_KeyDebounceArm(uint pin);
+void Aux_KeyDebounceArm();
 int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData);
 
 void Aux_KeyISR(uint gpio, uint32_t event_mask);

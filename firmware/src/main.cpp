@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#define KEYIRQ_CLEANUP 50000 // 50ms cleanup routine
 #define DEBOUNCE_RATE 3500 // 3.5ms debounce
 #define I2C_CLK_RATE 400000 // Conservative 400 kHz I2C
 
@@ -88,6 +89,14 @@ void Aux_UI()
     }
 }
 
+int64_t Aux_KeyDebounceCleanup(alarm_id_t id, void* userData)
+{
+    if (gotKeyIrq) {
+        Aux_ClearKeyIrq();
+    }
+    return 0;
+}
+
 int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData)
 {
     if (hwUserMode == UM_I2CKeypad) {
@@ -144,18 +153,18 @@ int64_t Aux_KeyDebounceRelease(alarm_id_t id, void* userData)
         }
         gpio_set_irq_enabled(lastKey, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
     }
+    add_alarm_in_us(KEYIRQ_CLEANUP, Aux_KeyDebounceCleanup, nullptr, true);
     lastKey = 0;
     lastKeyPressed = 0;
     return 0;
 }
 
-void Aux_KeyDebounceArm(uint pin)
+void Aux_KeyDebounceArm()
 {
     if (hwUserMode == UM_I2CKeypad) {
         gpio_set_irq_enabled(PIN_REMOTE_IRQ_R6, GPIO_IRQ_EDGE_FALL, false);
     } else if (hwUserMode == UM_GPIOKeypad) {
-        lastKey = pin;
-        gpio_set_irq_enabled(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false);
+        gpio_set_irq_enabled(lastKey, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false);
     }
     add_alarm_in_us(DEBOUNCE_RATE, Aux_KeyDebounceRelease, nullptr, true);
 }
@@ -169,7 +178,7 @@ void Aux_KeyISR(uint gpio, uint32_t event_mask)
                 case PIN_REMOTE_IRQ_R6: {
                     lastKeyPressed = 1;
                     lastKey = gpioexp->GetInterruptFlag();
-                    Aux_KeyDebounceArm(1);
+                    Aux_KeyDebounceArm();
                 } break;
                 }
             }
@@ -180,7 +189,8 @@ void Aux_KeyISR(uint gpio, uint32_t event_mask)
                 case PIN_KEY_UP_R5:
                 case PIN_KEY_DOWN_R5: {
                     lastKeyPressed = 1;
-                    Aux_KeyDebounceArm(gpio);
+                    lastKey = gpio;
+                    Aux_KeyDebounceArm();
                 } break;
                 }
             } else if (event_mask & GPIO_IRQ_EDGE_RISE) {
@@ -189,7 +199,8 @@ void Aux_KeyISR(uint gpio, uint32_t event_mask)
                 case PIN_KEY_UP_R5:
                 case PIN_KEY_DOWN_R5: {
                     lastKeyPressed = 2;
-                    Aux_KeyDebounceArm(gpio);
+                    lastKey = gpio;
+                    Aux_KeyDebounceArm();
                 } break;
                 }
             }
