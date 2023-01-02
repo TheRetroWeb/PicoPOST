@@ -75,7 +75,7 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm, const volatile bo
 
 static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset)
 {
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_RST, 1, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_RST_R6, 1, false);
     pio_sm_config c = Bus_FastReset_program_get_default_config(offset);
 
     sm_config_set_in_shift(&c, true, true, 1);
