@@ -166,7 +166,8 @@ int main()
     queue_init(&dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
 
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
-    UI_InitOLED(i2c0, 400000, 0x3C);
+    // TODO: read from GPIO expander bits [5..7] for display config
+    UI_InitOLED(i2c0, 400000, 0x3C, 0, 0);
 
     // Start async, multi-threaded data output dispatcher
     multicore_launch_core1(Aux_UI);
