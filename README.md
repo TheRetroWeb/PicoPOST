@@ -20,6 +20,8 @@
 
 ##  1. <a name='Introduction'></a>Introduction
 
+![PicoPOST Logo](/readme_files/logo.png)
+
 **PicoPOST** is a PC diagnostic card for systems with, at least, an 8-bit ISA
 slot. It's based around the Raspberry Pi Pico, powered by an RP2040.
 
@@ -85,15 +87,18 @@ The procedure is pretty straight-forward:
    cmake --build ./build --config Release --target all -j $(nproc)
    ```
 
-If you're using an IDE like Visual Studio Code, you can install the necessary
+If you're using an IDE like Visual Studio Code, you can follow the relevant build instructions
+in the [Pico SDK Getting Started guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf), or you can manually install the necessary
 extensions for C++ development and CMake build systems, then follow the
 configuration wizard for setting up the bare-metal ARM GCC compiler.
 
 ##  4. <a name='Flashingthefirmware'></a>Flashing the firmware
 
 Like all RPi Pico software, keep the BOOTSEL button pressed while plugging the
-USB cable into the Pico itself. A mass storage device should be now mounted on
-your computer.
+USB cable into the Pico itself. *(If the board is already powered, you can short
+the "Pico Reset" pins on the back of the card instead of removing the USB cable.)*
+
+A mass storage device should be now mounted on your computer.
 
 Drag and drop (or copy and paste) the `.uf2` firmware file into the device.
 Once loaded, it will automatically restart and disconnect.
