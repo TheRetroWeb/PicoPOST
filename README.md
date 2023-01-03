@@ -115,7 +115,5 @@ pcb/         KiCad schematics and PCB design files
 
 ##  6. <a name='License'></a>License
 
-TBD. All rights reserved by contributors.
-
-In the future this project will be open source (likely under a permissive license).
-For now, feel free to look around or to reach out if you're interested in contributing!
+The firmware portion of PicoPOST is licensed under the MIT license.\
+The hardware portion of PicoPOST is licensed under the CERN OHL v2 Permissive license.
