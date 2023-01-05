@@ -87,11 +87,13 @@ void Logic_VoltageMonitor(queue_t* list)
     while (!quitLoop) {
         float readFive = VoltMon_Read5();
         float readTwelve = VoltMon_Read12();
+        float readNTwelve = 0.0; // VoltMon_ReadN12();
 
         uint64_t tstamp = time_us_64() - lastReset;
         qd.timestamp = tstamp;
         qd.volts5 = readFive / 1000;
         qd.volts12 = readTwelve / 1000;
+        qd.voltsN12 = readNTwelve / 1000;
         queue_try_add(list, &qd);
 
         sleep_ms(100);

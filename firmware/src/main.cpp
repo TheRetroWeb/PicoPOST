@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define KEYIRQ_CLEANUP 50000 // 50ms cleanup routine
+#define KEYIRQ_CLEANUP 200000 // 200ms cleanup routine
 #define DEBOUNCE_RATE 3500 // 3.5ms debounce
 #define I2C_CLK_RATE 400000 // Conservative 400 kHz I2C
 
@@ -357,7 +357,7 @@ int main()
                 uint8_t keys = Aux_WaitForInput();
                 switch (keys) {
                 case KE_Down: {
-                    if (menuIdx < PS_MAX_PROG - 1)
+                    if (menuIdx < ui->GetMenuSize() - 1)
                         menuIdx++;
                 } break;
 
@@ -367,23 +367,37 @@ int main()
                 } break;
 
                 case KE_Select: {
-                    // Direct cast from int to ProgramSelect. EWW!
-                    logicSelect = (ProgramSelect)menuIdx;
+                    logicSelect = ui->GetMenuEntry(menuIdx).first;
                 } break;
                 }
             }
 
             ui->ClearScreen();
+            ui->DrawHeader(ui->GetMenuEntry(menuIdx).second);
 
             switch (logicSelect) {
 
             case PS_Port80Reader: {
-                ui->DrawHeader("Port 80h");
                 Logic_Port80Reader(&dataQueue);
             } break;
 
+            case PS_Port84Reader: {
+                Logic_Port80Reader(&dataQueue, 0x84);
+            } break;
+
+            case PS_Port90Reader: {
+                Logic_Port80Reader(&dataQueue, 0x90);
+            } break;
+            
+            case PS_Port300Reader: {
+                Logic_Port80Reader(&dataQueue, 0x300);
+            } break;
+            
+            case PS_Port378Reader: {
+                Logic_Port80Reader(&dataQueue, 0x378);
+            } break;
+
             case PS_VoltageMonitor: {
-                ui->DrawHeader("Voltage monitor");
                 Logic_VoltageMonitor(&dataQueue);
             } break;
 

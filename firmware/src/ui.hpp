@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-#define MAX_HISTORY 5
+#define MAX_HISTORY 10
 #define MAX_VALUE_LEN 15
 
 using OLEDLine = const char*;
@@ -36,9 +36,14 @@ public:
 
     void ClearBuffers();
 
+    const MenuEntry GetMenuEntry(uint index);
+
+    inline size_t GetMenuSize() const { return currentMenu.size(); }
+
 private:
     pico_oled::OLED* display { nullptr };
     pico_oled::Size dispSize { pico_oled::Size::W128xH32 };
+    unsigned int displayHeight { 32 };
     std::vector<MenuEntry> currentMenu {};
     char textBuffer[MAX_HISTORY][MAX_VALUE_LEN] { '\0' };
 
