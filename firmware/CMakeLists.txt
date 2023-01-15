@@ -20,6 +20,7 @@ pico_sdk_init()
 ## USER CONFIGURABLE PARAMS
 set(CALIBADJ_5V 1.0)
 set(CALIBADJ_12V 1.0)
+set(CALIBADJ_N12V 1.0)
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
@@ -41,6 +42,7 @@ list(APPEND PROJ_LIBS gpio_exp)
 add_executable(pico_post_fw
     "${PROJECT_SOURCE_DIR}/src/logic.cpp"
     "${PROJECT_SOURCE_DIR}/src/ui.cpp"
+    "${PROJECT_SOURCE_DIR}/src/app.cpp"
     "${PROJECT_SOURCE_DIR}/src/main.cpp"
 )
 

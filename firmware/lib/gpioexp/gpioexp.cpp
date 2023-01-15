@@ -8,19 +8,9 @@ MCP23009::MCP23009(i2c_inst* bus, uint8_t addr)
 
 bool MCP23009::IsConnected()
 {
-    uint8_t buffer[2] = { Registers::MCPREG_IODIR, 0xFF };
-
-    int rc = i2c_write_timeout_us(bus, addr, buffer, 1, false, 5000);
-    if (rc == PICO_ERROR_GENERIC || rc == PICO_ERROR_TIMEOUT) {
-        return false;
-    }
-
-    rc = i2c_read_timeout_us(bus, addr, buffer + 1, 1, false, 5000);
-    if (rc == PICO_ERROR_GENERIC || rc == PICO_ERROR_TIMEOUT) {
-        return false;
-    }
-
-    return true;
+    uint8_t buffer;
+    int rc = i2c_read_timeout_us(bus, addr, &buffer, sizeof(buffer), false, 50000);
+    return (rc == sizeof(buffer));
 }
 
 void MCP23009::SetDirection(uint8_t mask)
@@ -76,7 +66,7 @@ uint8_t MCP23009::GetInterruptCapture()
 bool MCP23009::Get(uint8_t pin)
 {
     uint8_t mask = GetAll();
-    return mask && (1 << pin);
+    return (mask & (1 << pin)) > 0;
 }
 
 uint8_t MCP23009::GetAll()
@@ -104,14 +94,31 @@ uint8_t MCP23009::_readRegister(Registers reg)
 {
     uint8_t buffer[2] = { reg, 0 };
 
-    i2c_write_timeout_us(bus, addr, buffer, 1, false, 5000);
-    i2c_read_timeout_us(bus, addr, buffer + 1, 1, false, 5000);
+    int rc = 0;
+    int retry = 5;
+    do {
+        rc = 0;
+        rc += i2c_write_timeout_us(bus, addr, buffer, 1, false, 50000);
+        rc += i2c_read_timeout_us(bus, addr, buffer + 1, 1, false, 50000);
+        if (rc != 2) {
+            busy_wait_ms(1);
+        }
+    } while (rc != 2 && retry > 0);
+    if (retry == 0) {
+        panic("MCP23009: failed to read register %d", reg);
+    }
 
     return buffer[1];
 }
 
-void MCP23009::_writeRegister(Registers reg, uint8_t value)
+bool MCP23009::_writeRegister(Registers reg, uint8_t value)
 {
     uint8_t buffer[2] = { reg, value };
-    i2c_write_timeout_us(bus, addr, buffer, sizeof(buffer), false, 5000);
+    int rc = i2c_write_timeout_us(bus, addr, buffer, sizeof(buffer), false, 50000);
+    if (rc == sizeof(buffer)) {
+        return true;
+    } else {
+        panic("MCP23009: failed to write register %d", reg);
+        return false;
+    }
 }

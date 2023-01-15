@@ -16,4 +16,7 @@
 // 12V readout calibration
 #define CALIBADJ_12V      @CALIBADJ_12V@
 
+// -12V readout calibration
+#define CALIBADJ_N12V      @CALIBADJ_N12V@
+
 #endif // __PICOPOST_PROJ_CALIB

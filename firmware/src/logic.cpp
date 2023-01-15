@@ -4,7 +4,7 @@
 
 #include "common.hpp"
 #include "fastread.pio.h"
-#include "voltmon.h"
+#include "voltmon.hpp"
 
 static volatile uint64_t lastReset = 0;
 static volatile bool quitLoop = false;
@@ -14,11 +14,11 @@ void Logic_Stop()
     quitLoop = true;
 }
 
-void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress)
+void Logic_Port80Reader(queue_t* list, bool newPcb, const uint16_t baseAddress)
 {
     uint resetOffset = pio_add_program(pio1, &Bus_FastReset_program);
     uint resetSm = pio_claim_unused_sm(pio1, true);
-    Bus_FastReset_init(pio1, resetSm, resetOffset);
+    Bus_FastReset_init(pio1, resetSm, resetOffset, newPcb);
 
     uint readerOffset = pio_add_program(pio0, &Bus_FastRead_program);
     uint readerSm = pio_claim_unused_sm(pio0, true);
@@ -29,23 +29,26 @@ void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress)
     quitLoop = false;
     lastReset = time_us_64();
     QueueData qd;
+    int lastResetSts = 0;
     while (!quitLoop) {
         // If reset is active, this read operation blocks the loop until reset
         // goes low. Returns true only if a proper reset pulse occurred.
         // Returns false if no reset event is happening
-        bool reset = Bus_FastReset_BlockingRead(pio1, resetSm, &quitLoop);
-        if (reset) {
-            lastReset = time_us_64();
-            qd.operation = QO_P80Reset;
-            queue_try_add(list, &qd);
-        }
+        int resetPulse = Bus_FastReset_PinImage(pio1, resetSm);
+        switch (resetPulse) {
 
-        if (!quitLoop) {
+        case 0: { // Reset is not asserted. Clear reset cycle (if needed) and read bus.
+            if (lastResetSts != resetPulse) {
+                lastResetSts = resetPulse;
+                lastReset = time_us_64();
+                qd.operation = QO_P80ResetCleared;
+                queue_try_add(list, &qd);
+            }
+
             // The readout from the FIFO should look a bit like this
             // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
             fullRead = Bus_FastRead_PinImage(pio0, readerSm, &quitLoop);
-            uint16_t addr = (fullRead & 0x0000FF00) +
-                ((fullRead & 0xFF000000) >> 24);
+            uint16_t addr = (fullRead & 0x0000FF00) + ((fullRead & 0xFF000000) >> 24);
             if (addr == baseAddress) {
                 uint8_t data = (fullRead & 0x00FF0000) >> 16;
                 qd.operation = QO_P80Data;
@@ -54,6 +57,15 @@ void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress)
                 qd.data = data;
                 queue_try_add(list, &qd);
             }
+        } break;
+
+        case 1: { // Reset is asserted.
+            if (lastResetSts != resetPulse) {
+                lastResetSts = resetPulse;
+                qd.operation = QO_P80ResetActive;
+                queue_try_add(list, &qd);
+            }
+        } break;
         }
     }
 
@@ -70,13 +82,13 @@ void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress)
     sleep_ms(100);
 }
 
-void Logic_VoltageMonitor(queue_t* list)
+void Logic_VoltageMonitor(queue_t* list, bool newPcb)
 {
     gpio_init(PICO_SMPS_MODE_PIN);
     gpio_set_dir(PICO_SMPS_MODE_PIN, GPIO_OUT);
     gpio_put(PICO_SMPS_MODE_PIN, true);
 
-    VoltMon_Init();
+    VoltMon* voltObj = new VoltMon(newPcb);
 
     QueueData qd = {
         .operation = QO_Volts
@@ -84,10 +96,12 @@ void Logic_VoltageMonitor(queue_t* list)
     quitLoop = false;
     lastReset = time_us_64();
 
+    float readFive = 0.0, readTwelve = 0.0, readNTwelve = 0.0;
+
     while (!quitLoop) {
-        float readFive = VoltMon_Read5();
-        float readTwelve = VoltMon_Read12();
-        float readNTwelve = 0.0; // VoltMon_ReadN12();
+        readFive = voltObj->Read5();
+        readTwelve = voltObj->Read12();
+        readNTwelve = voltObj->ReadN12();
 
         uint64_t tstamp = time_us_64() - lastReset;
         qd.timestamp = tstamp;
@@ -98,6 +112,8 @@ void Logic_VoltageMonitor(queue_t* list)
 
         sleep_ms(100);
     }
+
+    delete voltObj;
 
     gpio_put(PICO_SMPS_MODE_PIN, false);
 }

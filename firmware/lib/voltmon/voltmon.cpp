@@ -1,33 +1,46 @@
 /**
- *    lib/voltmon/voltmon.c
+ *    lib/voltmon/voltmon.cpp
  *
  *    Actually monitor volts
  *
  **/
 
-#include "voltmon.h"
+#include "voltmon.hpp"
 
-#include "calib.h"
 #include "pins.h"
 
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 
-void VoltMon_Init()
+VoltMon::VoltMon(bool supportsN12)
 {
+    useN12 = supportsN12;
     adc_init();
     adc_gpio_init(PIN_5V_MON);
     adc_gpio_init(PIN_12V_MON);
+    if (useN12) {
+        adc_gpio_init(PIN_N12V_MON_R6);
+    }
 }
 
-float VoltMon_Read5()
+double VoltMon::Read5()
 {
     adc_select_input(ADC_5V_MON);
-    return adc_read() * FACTOR_5V * CALIBADJ_5V;
+    return adc_read() * cfg_factor5V * cfg_adjust5V;
 }
 
-float VoltMon_Read12()
+double VoltMon::Read12()
 {
     adc_select_input(ADC_12V_MON);
-    return adc_read() * FACTOR_12V * CALIBADJ_12V;
+    return adc_read() * cfg_factor12V * cfg_adjust12V;
+}
+
+double VoltMon::ReadN12()
+{
+    if (useN12) {
+        adc_select_input(ADC_N12V_MON_R6);
+        return adc_read() * cfg_factorN12V * cfg_adjustN12V;
+    } else {
+        return 0.0;
+    }
 }

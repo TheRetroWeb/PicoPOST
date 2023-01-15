@@ -37,7 +37,8 @@ typedef enum __picopost_commmon_operation {
     QO_Credits,
 
     QO_P80Data,
-    QO_P80Reset,
+    QO_P80ResetActive,
+    QO_P80ResetCleared,
     QO_Volts,
 
     // More stuff coming soon?

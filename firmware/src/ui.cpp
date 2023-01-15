@@ -165,11 +165,14 @@ void UserInterface::NewData(const QueueData* buffer)
             } break;
 
             case QO_P80Data:
-            case QO_P80Reset: {
+            case QO_P80ResetActive:
+            case QO_P80ResetCleared: {
                 HistoryShift();
                 fillRect(display, 0, 12, 127, displayHeight - 1, WriteMode::SUBTRACT);
-                if (buffer->operation == QO_P80Reset) {
+                if (buffer->operation == QO_P80ResetActive) {
                     sprintf(textBuffer[0], "R!");
+                } else if (buffer->operation == QO_P80ResetCleared) {
+                    sprintf(textBuffer[0], "R_");
                 } else {
                     sprintf(textBuffer[0], "%02X", buffer->data);
                 }
@@ -240,8 +243,12 @@ void UserInterface::NewData(const QueueData* buffer)
                 tstamp, buffer->data, buffer->address);
         } break;
 
-        case QO_P80Reset: {
+        case QO_P80ResetActive: {
             printf("Reset!\n");
+        } break;
+
+        case QO_P80ResetCleared: {
+            printf("Reset cleared\n");
         } break;
 
         default: {

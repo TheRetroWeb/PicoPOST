@@ -136,7 +136,7 @@ private:
     uint8_t addr { 0x00 };
 
     uint8_t _readRegister(Registers reg);
-    void _writeRegister(Registers reg, uint8_t value);
+    bool _writeRegister(Registers reg, uint8_t value);
 };
 
 #endif // PICOPOST_LIB_GPIOEXP

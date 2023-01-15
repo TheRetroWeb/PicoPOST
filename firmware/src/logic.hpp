@@ -26,14 +26,13 @@ void Logic_Stop();
  * and data busses in one shot. The read operation itself is so fast, the ISA
  * bus itself could be read 4 times in a single host transaction!
  * Data is then sent to the queue, so the second core can waste time for
- * printing it to USB CDC serial port. OLED output will be implemented in the
- * near future.
+ * graphical and serial output.
  * 
  * @param baseAddress Address to listen to. Default 80h, some systems output on
  * different ports.
  *
  */
-void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress = 0x0080);
+void Logic_Port80Reader(queue_t* list, bool newPcb, const uint16_t baseAddress = 0x0080);
 
 /**
  * @brief Uses the ADC to probe the 5V and 12V supply rails
@@ -43,6 +42,6 @@ void Logic_Port80Reader(queue_t* list, const uint16_t baseAddress = 0x0080);
  * sends data to the queue for the serial port (or OLED) to display.
  *
  */
-void Logic_VoltageMonitor(queue_t* list);
+void Logic_VoltageMonitor(queue_t* list, bool newPcb);
 
 #endif // PICOPOST_LOGIC_HPP

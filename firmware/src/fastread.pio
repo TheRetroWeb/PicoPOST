@@ -27,7 +27,7 @@ static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
     pio_sm_config c = Bus_FastRead_program_get_default_config(offset);
     sm_config_set_set_pins(&c, PIN_ADDRESS_BANK, 1);
     sm_config_set_in_pins(&c, PIN_ISA_D0);
-    sm_config_set_clkdiv(&c, 3.0);
+    sm_config_set_clkdiv(&c, 2.0);
 
     sm_config_set_in_shift(&c, true, true, 16);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
@@ -63,6 +63,7 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm, const volatile bo
     mov ISR, X
     push                        ; Block FIFO read for main program
     wait 0 pin 26               ; Wait for reset signal to transition low
+    irq clear 0                 ; Notify SM to accept incoming reset reads
     set X, 1
     mov ISR, X
     push                        ; Send a complete reset event and unlock FIFO
@@ -73,9 +74,9 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm, const volatile bo
 #include "hardware/gpio.h"
 #include <stdio.h>
 
-static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset)
+static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset, bool newPcb)
 {
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_RST_R6, 1, false);
+    pio_sm_set_consecutive_pindirs(pio, sm, newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5, 1, false);
     pio_sm_config c = Bus_FastReset_program_get_default_config(offset);
 
     sm_config_set_in_shift(&c, true, true, 1);
@@ -86,21 +87,14 @@ static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset)
     pio_sm_set_enabled(pio, sm, true);
 }
 
-static inline bool Bus_FastReset_BlockingRead(PIO pio, uint sm, const volatile bool* quitLoop)
+static inline int Bus_FastReset_PinImage(PIO pio, uint sm)
 {
     if (pio_sm_is_rx_fifo_empty(pio, sm)) {
-        return false;
+        return 0;
     }
 
-    io_ro_32 *rxfifo_shift = (io_ro_32*)&pio->rxf[sm];
-    while ((*rxfifo_shift & 0x01) == 0 && !(*quitLoop)) {
-        tight_loop_contents();
-    }
-    if (*quitLoop) {
-        return false;
-    }
-
-    return true;
+    io_ro_8 *rxfifo_shift = (io_ro_8*)&pio->rxf[sm] + 3;
+    return (*rxfifo_shift & 0x01) == 1;
 }
 
 %}
