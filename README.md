@@ -18,6 +18,8 @@
 
 -----------------------------
 
+> You can get a quick summary from the blog post! [Introducing the PicoPOST - The Retro Web Blog](https://blog.theretroweb.com/2023/01/03/introducing-the-picopost/)
+
 ##  1. <a name='Introduction'></a>Introduction
 
 ![PicoPOST Logo](/readme_files/logo.png)
