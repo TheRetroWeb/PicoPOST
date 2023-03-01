@@ -1,0 +1,132 @@
+{
+"DesignRules": [
+{
+"Layers": "Outer",
+"MinLineWidth": 0.127,
+"PadToPad": 0.127,
+"PadToTrack": 0.127,
+"RegionToRegion": 0.508,
+"TrackToRegion": 0.508,
+"TrackToTrack": 0.127
+}
+],
+"FilesAttributes": [
+{
+"FileFunction": "Copper,L1,Top",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-F_Cu.gbr"
+},
+{
+"FileFunction": "Copper,L2,Bot",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-B_Cu.gbr"
+},
+{
+"FileFunction": "SolderPaste,Top",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-F_Paste.gbr"
+},
+{
+"FileFunction": "SolderPaste,Bot",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-B_Paste.gbr"
+},
+{
+"FileFunction": "Legend,Top",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-F_Silkscreen.gbr"
+},
+{
+"FileFunction": "Legend,Bot",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-B_Silkscreen.gbr"
+},
+{
+"FileFunction": "SolderMask,Top",
+"FilePolarity": "Negative",
+"Path": "ISA rev7-F_Mask.gbr"
+},
+{
+"FileFunction": "SolderMask,Bot",
+"FilePolarity": "Negative",
+"Path": "ISA rev7-B_Mask.gbr"
+},
+{
+"FileFunction": "Profile",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-Edge_Cuts.gbr"
+},
+{
+"FileFunction": "Other,User",
+"FilePolarity": "Positive",
+"Path": "ISA rev7-User_1.gbr"
+}
+],
+"GeneralSpecs": {
+"BoardThickness": 1.6,
+"Finish": "None",
+"LayerNumber": 2,
+"ProjectId": {
+"GUID": "49534120-7265-4763-962e-6b696361645f",
+"Name": "ISA rev6",
+"Revision": "rev?"
+},
+"Size": {
+"X": 82.0801,
+"Y": 68.3641
+}
+},
+"Header": {
+"CreationDate": "2023-01-02T12:33:02-06:00",
+"GenerationSoftware": {
+"Application": "Pcbnew",
+"Vendor": "KiCad",
+"Version": "(6.0.5)"
+}
+},
+"MaterialStackup": [
+{
+"Name": "Top Silk Screen",
+"Type": "Legend"
+},
+{
+"Name": "Top Solder Paste",
+"Type": "SolderPaste"
+},
+{
+"Name": "Top Solder Mask",
+"Thickness": 0.01,
+"Type": "SolderMask"
+},
+{
+"Name": "F.Cu",
+"Thickness": 0.035,
+"Type": "Copper"
+},
+{
+"Material": "FR4",
+"Name": "F.Cu/B.Cu",
+"Notes": "Type: dielectric layer 1 (from F.Cu to B.Cu)",
+"Thickness": 1.51,
+"Type": "Dielectric"
+},
+{
+"Name": "B.Cu",
+"Thickness": 0.035,
+"Type": "Copper"
+},
+{
+"Name": "Bottom Solder Mask",
+"Thickness": 0.01,
+"Type": "SolderMask"
+},
+{
+"Name": "Bottom Solder Paste",
+"Type": "SolderPaste"
+},
+{
+"Name": "Bottom Silk Screen",
+"Type": "Legend"
+}
+]
+}

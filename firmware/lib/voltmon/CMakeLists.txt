@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 ## COMMENT THIS LINE FOR LOCAL SDK
 # set(PICO_SDK_FETCH_FROM_GIT on)
-set(PICO_SDK_PATH "~/repo/pico-sdk")
+#set(PICO_SDK_PATH "~/repo/pico-sdk")
 include("${PROJECT_SOURCE_DIR}/pico_sdk_import.cmake")
 
 pico_sdk_init()
