@@ -1086,7 +1086,7 @@
     (uuid edc3b907-17b3-4c26-94d6-f7b93cddd210)
   )
 
-  (text "GND\nIRQ\n5V\nGND\nSCL\nSDA\nGND" (at 20.32 76.2 0)
+  (text "GND\nSDA\nSCL\nGND\n5V\nIRQ\nGND" (at 20.32 76.2 0)
     (effects (font (size 1.5 1.5)) (justify left bottom))
     (uuid 183dc1be-73ae-4cb1-bf54-92894ed8d351)
   )

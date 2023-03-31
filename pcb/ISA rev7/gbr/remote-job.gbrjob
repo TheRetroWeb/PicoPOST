@@ -1,132 +1,132 @@
 {
-"DesignRules": [
-{
-"Layers": "Outer",
-"MinLineWidth": 0.127,
-"PadToPad": 0.127,
-"PadToTrack": 0.127,
-"RegionToRegion": 0.508,
-"TrackToRegion": 0.508,
-"TrackToTrack": 0.127
-}
-],
-"FilesAttributes": [
-{
-"FileFunction": "Copper,L1,Top",
-"FilePolarity": "Positive",
-"Path": "remote-F_Cu.gbr"
-},
-{
-"FileFunction": "Copper,L2,Bot",
-"FilePolarity": "Positive",
-"Path": "remote-B_Cu.gbr"
-},
-{
-"FileFunction": "SolderPaste,Top",
-"FilePolarity": "Positive",
-"Path": "remote-F_Paste.gbr"
-},
-{
-"FileFunction": "SolderPaste,Bot",
-"FilePolarity": "Positive",
-"Path": "remote-B_Paste.gbr"
-},
-{
-"FileFunction": "Legend,Top",
-"FilePolarity": "Positive",
-"Path": "remote-F_Silkscreen.gbr"
-},
-{
-"FileFunction": "Legend,Bot",
-"FilePolarity": "Positive",
-"Path": "remote-B_Silkscreen.gbr"
-},
-{
-"FileFunction": "SolderMask,Top",
-"FilePolarity": "Negative",
-"Path": "remote-F_Mask.gbr"
-},
-{
-"FileFunction": "SolderMask,Bot",
-"FilePolarity": "Negative",
-"Path": "remote-B_Mask.gbr"
-},
-{
-"FileFunction": "Profile",
-"FilePolarity": "Positive",
-"Path": "remote-Edge_Cuts.gbr"
-},
-{
-"FileFunction": "Other,User",
-"FilePolarity": "Positive",
-"Path": "remote-User_1.gbr"
-}
-],
-"GeneralSpecs": {
-"BoardThickness": 1.6,
-"Finish": "None",
-"LayerNumber": 2,
-"ProjectId": {
-"GUID": "72656d6f-7465-42e6-9b69-6361645f7063",
-"Name": "remote",
-"Revision": "rev?"
-},
-"Size": {
-"X": 50.0761,
-"Y": 50.0761
-}
-},
-"Header": {
-"CreationDate": "2023-01-02T12:27:37-06:00",
-"GenerationSoftware": {
-"Application": "Pcbnew",
-"Vendor": "KiCad",
-"Version": "(6.0.5)"
-}
-},
-"MaterialStackup": [
-{
-"Name": "Top Silk Screen",
-"Type": "Legend"
-},
-{
-"Name": "Top Solder Paste",
-"Type": "SolderPaste"
-},
-{
-"Name": "Top Solder Mask",
-"Thickness": 0.01,
-"Type": "SolderMask"
-},
-{
-"Name": "F.Cu",
-"Thickness": 0.035,
-"Type": "Copper"
-},
-{
-"Material": "FR4",
-"Name": "F.Cu/B.Cu",
-"Notes": "Type: dielectric layer 1 (from F.Cu to B.Cu)",
-"Thickness": 1.51,
-"Type": "Dielectric"
-},
-{
-"Name": "B.Cu",
-"Thickness": 0.035,
-"Type": "Copper"
-},
-{
-"Name": "Bottom Solder Mask",
-"Thickness": 0.01,
-"Type": "SolderMask"
-},
-{
-"Name": "Bottom Solder Paste",
-"Type": "SolderPaste"
-},
-{
-"Name": "Bottom Silk Screen",
-"Type": "Legend"
-}
-]
+  "Header": {
+    "GenerationSoftware": {
+      "Vendor": "KiCad",
+      "Application": "Pcbnew",
+      "Version": "(6.0.5)"
+    },
+    "CreationDate": "2023-03-31T09:28:20-05:00"
+  },
+  "GeneralSpecs": {
+    "ProjectId": {
+      "Name": "remote",
+      "GUID": "72656d6f-7465-42e6-9b69-6361645f7063",
+      "Revision": "rev?"
+    },
+    "Size": {
+      "X": 50.0761,
+      "Y": 50.0761
+    },
+    "LayerNumber": 2,
+    "BoardThickness": 1.6,
+    "Finish": "None"
+  },
+  "DesignRules": [
+    {
+      "Layers": "Outer",
+      "PadToPad": 0.127,
+      "PadToTrack": 0.127,
+      "TrackToTrack": 0.127,
+      "MinLineWidth": 0.127,
+      "TrackToRegion": 0.508,
+      "RegionToRegion": 0.508
+    }
+  ],
+  "FilesAttributes": [
+    {
+      "Path": "remote-F_Cu.gbr",
+      "FileFunction": "Copper,L1,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-B_Cu.gbr",
+      "FileFunction": "Copper,L2,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-F_Paste.gbr",
+      "FileFunction": "SolderPaste,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-B_Paste.gbr",
+      "FileFunction": "SolderPaste,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-F_Silkscreen.gbr",
+      "FileFunction": "Legend,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-B_Silkscreen.gbr",
+      "FileFunction": "Legend,Bot",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-F_Mask.gbr",
+      "FileFunction": "SolderMask,Top",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "remote-B_Mask.gbr",
+      "FileFunction": "SolderMask,Bot",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "remote-Edge_Cuts.gbr",
+      "FileFunction": "Profile",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "remote-User_1.gbr",
+      "FileFunction": "Other,User",
+      "FilePolarity": "Positive"
+    }
+  ],
+  "MaterialStackup": [
+    {
+      "Type": "Legend",
+      "Name": "Top Silk Screen"
+    },
+    {
+      "Type": "SolderPaste",
+      "Name": "Top Solder Paste"
+    },
+    {
+      "Type": "SolderMask",
+      "Thickness": 0.01,
+      "Name": "Top Solder Mask"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.035,
+      "Name": "F.Cu"
+    },
+    {
+      "Type": "Dielectric",
+      "Thickness": 1.51,
+      "Material": "FR4",
+      "Name": "F.Cu/B.Cu",
+      "Notes": "Type: dielectric layer 1 (from F.Cu to B.Cu)"
+    },
+    {
+      "Type": "Copper",
+      "Thickness": 0.035,
+      "Name": "B.Cu"
+    },
+    {
+      "Type": "SolderMask",
+      "Thickness": 0.01,
+      "Name": "Bottom Solder Mask"
+    },
+    {
+      "Type": "SolderPaste",
+      "Name": "Bottom Solder Paste"
+    },
+    {
+      "Type": "Legend",
+      "Name": "Bottom Silk Screen"
+    }
+  ]
 }
