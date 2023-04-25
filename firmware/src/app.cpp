@@ -10,80 +10,58 @@
 // System libs
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
-#include <stdio.h>
+#include <cstdio>
+#include <cstring>
 
-Application* Application::instance { nullptr };
+std::unique_ptr<Application> Application::instance { nullptr };
 
 Application* Application::GetInstance()
 {
     if (Application::instance == nullptr) {
-        Application::instance = new Application();
+        Application::instance = std::make_unique<Application>();
     }
-    return Application::instance;
+    return Application::instance.get();
 }
 
-int Application::PrimaryTask()
+__attribute__((noreturn)) void Application::PrimaryTask()
 {
     while (true) {
         if (app_hwMode == UM_Invalid) {
-            gpio_put(PICO_DEFAULT_LED_PIN, true);
-            sleep_ms(250);
-            gpio_put(PICO_DEFAULT_LED_PIN, false);
-            sleep_ms(250);
+            BlinkenHalt(ErrorCodes::ERR_InvalidHWConfig);
         } else if (app_hwMode == UM_Serial) {
-            Logic_Port80Reader(&app_dataQueue, false);
+            Logic::Port80Reader(&app_dataQueue, false);
         } else {
-            switch (app_select) {
+            switch (this->app_currentSelect) {
 
-                /*case PS_FullReader: {
-                    ui->DrawFooter("Check serial output");
-                    Logic_FullReader(&app_dataQueue, app_hwMode == UM_I2CKeypad);
-                } break;*/
+            /* TODO implement full stank reader
+            case ProgramSelect::PS_FullReader: {
+                ui->DrawFooter("Check serial output");
+                Logic::FullReader(&app_dataQueue, app_hwMode == UM_I2CKeypad);
+            } break;
+            */
 
-            case PS_Port80Reader: {
-                Logic_Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad);
+            case ProgramSelect::Port80Reader: {
+                Logic::Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad);
             } break;
 
-            case PS_Port84Reader: {
-                Logic_Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x84);
+            case ProgramSelect::Port84Reader: {
+                Logic::Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x84);
             } break;
 
-            case PS_Port90Reader: {
-                Logic_Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x90);
+            case ProgramSelect::Port90Reader: {
+                Logic::Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x90);
             } break;
 
-            case PS_Port300Reader: {
-                Logic_Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x300);
+            case ProgramSelect::Port300Reader: {
+                Logic::Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x300);
             } break;
 
-            case PS_Port378Reader: {
-                Logic_Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x378);
+            case ProgramSelect::Port378Reader: {
+                Logic::Port80Reader(&app_dataQueue, app_hwMode == UM_I2CKeypad, 0x378);
             } break;
 
-            case PS_VoltageMonitor: {
-                Logic_VoltageMonitor(&app_dataQueue, app_hwMode == UM_I2CKeypad);
-            } break;
-
-            case PS_Info: {
-                app_ui->DrawHeader("PicoPOST " PROJ_STR_VER);
-                uint startIdx = 0;
-                char creditsBlock[20] = { '\0' };
-                const size_t lineLength = strlen(creditsLine);
-                while (app_select == PS_Info) {
-                    size_t blockLength = MIN(19, lineLength - startIdx);
-                    memcpy(creditsBlock, creditsLine + startIdx, blockLength);
-                    if (startIdx > (lineLength - 19)) {
-                        memset(creditsBlock + blockLength, '\0', lineLength - startIdx);
-                    }
-                    app_ui->DrawFooter(creditsBlock);
-                    startIdx++;
-                    if (startIdx == lineLength) {
-                        startIdx = 0;
-                        sleep_ms(1000);
-                    } else {
-                        sleep_ms(300);
-                    }
-                }
+            case ProgramSelect::VoltageMonitor: {
+                Logic::VoltageMonitor(&app_dataQueue, app_hwMode == UM_I2CKeypad);
             } break;
 
             default: {
@@ -92,13 +70,11 @@ int Application::PrimaryTask()
             }
         }
     }
-
-    return 0;
 }
 
-void Application::UITask()
+__attribute__((noreturn)) void Application::UITask()
 {
-    Application* self = Application::GetInstance();
+    auto self = Application::GetInstance();
 
     // Register IRQ handlers and other UI-related functions to 2nd core
     switch (self->app_hwMode) {
@@ -107,7 +83,6 @@ void Application::UITask()
         gpio_init(PIN_REMOTE_IRQ_R6);
         gpio_set_dir(PIN_REMOTE_IRQ_R6, GPIO_IN);
         gpio_pull_up(PIN_REMOTE_IRQ_R6);
-        gpio_set_irq_enabled_with_callback(PIN_REMOTE_IRQ_R6, GPIO_IRQ_EDGE_FALL, true, self->I2CKeypadISR);
     } break;
 
     case UM_GPIOKeypad: {
@@ -118,124 +93,206 @@ void Application::UITask()
             gpio_init(pin);
             gpio_set_dir(pin, GPIO_IN);
             gpio_pull_up(pin);
-            // gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, self->GPIOKeypadISR);
         }
+    } break;
+
+    default: {
+        // no keystrokes expected in this mode
     } break;
     }
 
     // Start UI loop
-    int currMenuIdx = -1;
     while (true) {
-        // Output data to display and serial
-        if (self->app_select != PS_MAX_PROG) {
-            uint count = queue_get_level(&self->app_dataQueue);
-            if (count > 0) {
-                QueueData buffer;
-                queue_remove_blocking(&self->app_dataQueue, &buffer);
-                self->app_ui->NewData(&buffer);
-            }
-        } else {
-            if (self->app_menuIdx != currMenuIdx) {
-                currMenuIdx = self->app_menuIdx;
-                self->app_ui->DrawMenu(currMenuIdx);
-            }
+        // Read keystrokes
+        if (self->app_hwMode == UM_I2CKeypad) {
+            self->PollI2CKeypad();
+        } else if (self->app_hwMode == UM_GPIOKeypad) {
+            // TODO self->PollGPIOKeypad();
         }
 
-        // Manage pending keypad operations
-        if (self->key_irqFlag) {
-            if (mutex_try_enter(&self->key_mutex, nullptr)) {
-                if (self->app_select != PS_MAX_PROG) {
-                    if ((self->app_hwMode == UM_I2CKeypad && (self->key_current & KE_Back))
-                        || (self->app_hwMode == UM_GPIOKeypad && (self->key_current & (KE_Up | KE_Down)))) {
-                        Logic_Stop();
-                        self->app_select = PS_MAX_PROG;
-                        self->app_ui->ClearBuffers();
-                        currMenuIdx = -1;
-                        while (!queue_is_empty(&self->app_dataQueue)) {
-                            QueueData bogus;
-                            queue_remove_blocking(&self->app_dataQueue, &bogus);
-                        }
-                    }
-                } else {
-                    switch (self->key_current) {
-                    case KE_Down: {
-                        if (self->app_menuIdx < self->app_ui->GetMenuSize() - 1)
-                            self->app_menuIdx++;
-                    } break;
+        // Handle pending keystrokes
+        if (self->key_debounceStage == DebouncerStep::Debounce_PendingEvent) {
+            self->Keystroke();
+        }
 
-                    case KE_Up: {
-                        if (self->app_menuIdx > 0)
-                            self->app_menuIdx--;
-                    } break;
+        // Output data for user
+        self->UserOutput();
+    }
+}
 
-                    case KE_Select: {
-                        self->app_ui->ClearScreen();
-                        self->app_ui->DrawHeader(self->app_ui->GetMenuEntry(self->app_menuIdx).second);
-                        self->app_select = self->app_ui->GetMenuEntry(self->app_menuIdx).first;
-                    } break;
-                    }
+void Application::PollI2CKeypad()
+{
+    switch (this->key_debounceStage) {
+
+    case DebouncerStep::Debounce_Poll: {
+        if (time_us_64() >= this->key_nextPoll) {
+            bool hwIrqPending = !gpio_get(PIN_REMOTE_IRQ_R6);
+            if (hwIrqPending) {
+                this->key_irqFlagPoll = this->hw_gpioexp->GetInterruptCapture();
+                this->key_debounceExpiry = time_us_64() + this->c_debounceRate;
+                this->key_debounceStage = DebouncerStep::Debounce_FirstTrigger;
+            }
+            this->key_nextPoll = time_us_64() + 50000;
+        }
+    } break;
+
+    case DebouncerStep::Debounce_FirstTrigger: {
+        if (time_us_64() >= this->key_debounceExpiry) {
+            uint8_t currentKeymap = this->hw_gpioexp->GetAll(); // This clears the hw interrupt
+            uint8_t persistentPress = (this->key_irqFlagPoll & currentKeymap);
+            this->key_debounceStage = DebouncerStep::Debounce_Poll;
+            if (persistentPress != this->key_previousPress) {
+                if (persistentPress & (1 << GPIOEXP_KEY_UP)) {
+                    this->key_current |= KE_Up;
                 }
-                self->ClearKeypadIRQ();
-                mutex_exit(&self->key_mutex);
+                if (persistentPress & (1 << GPIOEXP_KEY_DOWN)) {
+                    this->key_current |= KE_Down;
+                }
+                if (persistentPress & (1 << GPIOEXP_KEY_SELECT)) {
+                    this->key_current |= KE_Select;
+                }
+                if (persistentPress & (1 << GPIOEXP_KEY_BACK)) {
+                    this->key_current |= KE_Back;
+                }
+                if (this->key_current != KE_None) {
+                    this->key_debounceStage = DebouncerStep::Debounce_PendingEvent;
+                }
             }
-        } else {
-            if (self->app_hwMode == UM_I2CKeypad && !gpio_get(PIN_REMOTE_IRQ_R6)) {
-                self->hw_gpioexp->GetAll();
-            }
+            this->key_previousPress = persistentPress;
+            this->key_irqFlagPoll = 0x00;
+            this->key_debounceExpiry = 0;
         }
+    } break;
+
+    default: {
+        // Wait for an external event to reset the key poll state
+    } break;
     }
 }
 
-int64_t Application::I2CKeypadDebouncer(alarm_id_t id, void* userData)
+void Application::Keystroke()
 {
-    Application* self = static_cast<Application*>(userData);
-    mutex_enter_blocking(&self->key_mutex);
-    if (self->key_debounceStage == 1) {
-        auto maskRead = self->hw_gpioexp->GetAll();
-        if (self->key_irqProbe & maskRead) {
-            if (maskRead & (1 << GPIOEXP_KEY_UP)) {
-                self->key_current |= KE_Up;
-            }
-            if (maskRead & (1 << GPIOEXP_KEY_DOWN)) {
-                self->key_current |= KE_Down;
-            }
-            if (maskRead & (1 << GPIOEXP_KEY_SELECT)) {
-                self->key_current |= KE_Select;
-            }
-            if (maskRead & (1 << GPIOEXP_KEY_BACK)) {
-                self->key_current |= KE_Back;
-            }
-            self->key_irqFlag = true;
-        }
-    }
-    self->key_irqProbe = 0;
-    self->key_debounceStage = 0;
-    mutex_exit(&self->key_mutex);
-    return 0;
-}
+    /**
+     * @brief DO NOT OUTPUT ANYTHING FROM HERE!
+     * No OLED, no serial, no nothing.
+     * Here, stored keystrokes should be used to reconfigure internal variables
+     * so the next call to UserOutput() already knows what to do.
+     * 
+     */
+    switch (this->app_currentSelect) {
+    case ProgramSelect::MainMenu: {
+        switch (this->key_current) {
+        case KE_Down: {
+            if (this->app_newMenuIdx < this->app_ui->GetMenuSize() - 1)
+                this->app_newMenuIdx++;
+        } break;
 
-void Application::I2CKeypadISR(uint gpio, uint32_t event_mask)
-{
-    if (event_mask & GPIO_IRQ_EDGE_FALL) {
-        Application* self = Application::GetInstance();
-        if (self->key_irqProbe == 0) {
-            switch (gpio) {
-            case PIN_REMOTE_IRQ_R6: {
-                self->key_debounceStage = 1;
-                self->key_irqProbe = self->hw_gpioexp->GetInterruptFlag();
-                add_alarm_in_us(DEBOUNCE_RATE, Application::I2CKeypadDebouncer, self, true);
-            } break;
-            }
-        }
-    }
-}
+        case KE_Up: {
+            if (this->app_newMenuIdx > 0)
+                this->app_newMenuIdx--;
+        } break;
 
-void Application::ClearKeypadIRQ()
-{
-    this->key_irqFlag = false;
+        case KE_Select: {
+            this->app_newSelect = this->app_ui->GetMenuEntry(this->app_currentMenuIdx).first;
+            this->app_textScrollStage = TextScrollStep::DrawHeader;
+        } break;
+
+        default: {
+            // other key strokes not expected
+        } break;
+        }
+    } break;
+
+    default: {
+        if (this->key_current & KE_Back) {
+            Logic::Stop();
+            this->app_newSelect = ProgramSelect::MainMenu;
+            while (!queue_is_empty(&this->app_dataQueue)) {
+                QueueData bogus;
+                queue_remove_blocking(&this->app_dataQueue, &bogus);
+            }
+            this->app_newMenuIdx = this->app_currentMenuIdx;
+            this->app_currentMenuIdx = -1;
+        }
+    } break;
+    }
+
+    this->key_debounceStage = DebouncerStep::Debounce_Poll;
     this->key_current = KE_None;
-    this->key_debounceStage = 0;
-    this->key_irqProbe = 0;
+}
+
+void Application::UserOutput()
+{
+    if (this->app_newSelect != this->app_currentSelect) {
+        this->app_ui->ClearBuffers();
+        this->app_ui->ClearScreen();
+        this->app_currentSelect = this->app_newSelect;
+        this->app_ui->DrawHeader(this->app_ui->GetMenuEntry(this->app_currentMenuIdx).second);
+    }
+
+    switch (this->app_currentSelect) {
+    case ProgramSelect::MainMenu: {
+        if (this->app_newMenuIdx != this->app_currentMenuIdx) {
+            this->app_currentMenuIdx = this->app_newMenuIdx;
+            this->app_ui->DrawMenu(this->app_currentMenuIdx);
+        }
+    } break;
+
+    case ProgramSelect::Info: {
+        switch (this->app_textScrollStage) {
+            case TextScrollStep::DrawHeader: {
+                this->app_ui->DrawHeader("PicoPOST " PROJ_STR_VER);
+                this->app_textScrollSourceIdx = 0;
+                this->app_textScrollStage = TextScrollStep::DrawBlock;
+            } break;
+
+            case TextScrollStep::DrawBlock: {
+                this->app_textScrollOutput.clear();
+                this->app_textScrollOutput.assign(creditsLine + this->app_textScrollSourceIdx);
+                this->app_textScrollOutput = this->app_textScrollOutput.substr(0, c_maxStrbuff);
+                this->app_ui->DrawFooter(this->app_textScrollOutput.c_str());
+                this->app_textScrollSourceIdx++;
+                this->app_textScrollSourceIdx %= strlen(creditsLine);
+                this->app_textScrollTick = time_us_64() + 250000;
+                if (this->app_textScrollSourceIdx == 0)
+                    this->app_textScrollTick = time_us_64() + 1000000;
+                this->app_textScrollStage = TextScrollStep::Wait;
+            } break;
+
+            case TextScrollStep::Wait: {
+                if (time_us_64() >= this->app_textScrollTick)
+                    this->app_textScrollStage = TextScrollStep::DrawBlock;
+            } break;
+
+            case TextScrollStep::Quit: {
+                this->app_textScrollSourceIdx = 0;
+                this->app_textScrollTick = 0;
+            } break;
+        }
+    } break;
+
+    default: {
+        uint count = queue_get_level(&this->app_dataQueue);
+        if (count > 0) {
+            QueueData buffer;
+            queue_remove_blocking(&this->app_dataQueue, &buffer);
+            this->app_ui->NewData(&buffer);
+        }
+    } break;
+    }
+}
+
+__attribute__((noreturn)) void Application::BlinkenHalt(ErrorCodes blinks)
+{
+    while (true) {
+        for (unsigned int i = 0; i < static_cast<unsigned int>(blinks); i++) {
+            gpio_put(PICO_DEFAULT_LED_PIN, true);
+            sleep_ms(250);
+            gpio_put(PICO_DEFAULT_LED_PIN, false);
+            sleep_ms(250);
+        }
+        sleep_ms(1250);
+    }
 }
 
 Application::Application()
@@ -243,9 +300,6 @@ Application::Application()
     // When starting from ISA bus, power might be unstable and I2C may be
     // unresponsive. Delay everything by some arbitrary amount of time
     sleep_ms(150);
-
-    // Initialize keypad access mutex to avoid race conditions
-    mutex_init(&this->key_mutex);
 
     // Initialize data queue for async, multi-threaded data output
     queue_init(&this->app_dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
@@ -257,7 +311,7 @@ Application::Application()
     gpio_put(PICO_DEFAULT_LED_PIN, false);
 
     // Initialize USB CDC serial port
-    bool usb = stdio_usb_init();
+    // bool usb = stdio_usb_init();
 
     // Init I2C bus for remote
     i2c_init(i2c0, I2C_CLK_RATE);
@@ -268,7 +322,7 @@ Application::Application()
     printf("Looking for MCP23009... ");
     this->hw_gpioexp = new MCP23009(i2c0, 0x20);
     if (this->hw_gpioexp->IsConnected()) {
-        printf("GPIO Exp OK! -> Assuming PCB rev6\n");
+        printf("GPIO Exp OK! -> Assuming PCB rev6+\n");
         this->app_hwMode = UM_I2CKeypad;
         this->hw_gpioexp->Config(true, false, false, false);
         this->hw_gpioexp->SetDirection(GPIOEXP_CFG_PINDIR);
@@ -278,14 +332,17 @@ Application::Application()
         this->hw_gpioexp->SetInterruptEvent(GPIOEXP_CFG_PINIRQ);
         this->hw_gpioexp->SetPullUps(GPIOEXP_CFG_PINPOL);
     } else {
-        printf("GPIO Exp KO! -> Assuming PCB rev5\n");
+        /*printf("GPIO Exp KO! -> Assuming PCB rev5\n");
         delete this->hw_gpioexp;
         this->hw_gpioexp = nullptr;
-        this->app_hwMode = UM_GPIOKeypad;
+        this->app_hwMode = UM_GPIOKeypad;*/
+        BlinkenHalt(ErrorCodes::ERR_MissingGPIOExpander);
     }
 
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
-    bool dispType = false, dispSize = false, dispFlip = false;
+    bool dispType = false;
+    bool dispSize = false;
+    bool dispFlip = false;
     pico_oled::Size libOledSize = pico_oled::Size::W128xH32;
     if (this->app_hwMode == UM_I2CKeypad) {
         auto gpioConfig = this->hw_gpioexp->GetAll();
@@ -310,9 +367,10 @@ Application::Application()
         }
         this->hw_oled->setOrientation(dispFlip);
     } else {
-        delete this->hw_oled;
+        /*delete this->hw_oled;
         this->app_hwMode = UM_Serial;
-        printf("OLED KO! -> Falling back to USB ACM\n");
+        printf("OLED KO! -> Falling back to USB ACM\n");*/
+        BlinkenHalt(ErrorCodes::ERR_MissingDisplay);
     }
 
     this->app_ui = new UserInterface(this->hw_oled, libOledSize);

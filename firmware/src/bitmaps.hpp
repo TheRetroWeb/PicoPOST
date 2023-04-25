@@ -1,15 +1,15 @@
 #ifndef PICOPOST_BITMAP_HPP
 #define PICOPOST_BITMAP_HPP
 
-#include <stdint.h>
+#include <cstdint>
 
-#define MAX_BMP_IMAGE 4096
+static const size_t c_maxBmpPayload { 4096 };
 
-typedef struct __picopost_bitmap {
+struct Bitmap {
     uint width;
     uint height;
-    uint8_t image[MAX_BMP_IMAGE];
-} Bitmap;
+    uint8_t image[c_maxBmpPayload];
+};
 
 static Bitmap bmp_arrowUp = {
     8, 8,

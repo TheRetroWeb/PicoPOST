@@ -1,11 +1,5 @@
 #include "gpioexp.hpp"
 
-MCP23009::MCP23009(i2c_inst* bus, uint8_t addr)
-{
-    this->bus = bus;
-    this->addr = addr;
-}
-
 bool MCP23009::IsConnected()
 {
     uint8_t buffer;

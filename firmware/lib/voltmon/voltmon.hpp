@@ -32,11 +32,11 @@
 
 class VoltMon {
 public:
-    VoltMon(bool supportsN12);
+    explicit VoltMon(bool supportsN12);
 
-    double Read5();
-    double Read12();
-    double ReadN12();
+    double Read5() const;
+    double Read12() const;
+    double ReadN12() const;
 
 private:
     const int cfg_adcVref { 3260 };

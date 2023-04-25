@@ -10,19 +10,17 @@
 using namespace pico_oled;
 
 const std::vector<MenuEntry> UserInterface::s_mainMenu = {
-    { PS_Port80Reader, "Port 80h std" },
-    { PS_Port84Reader, "Port 84h CPQ" },
-    { PS_Port90Reader, "Port 90h PS/2" },
-    { PS_Port300Reader, "Port 300h EISA" },
-    { PS_Port378Reader, "Port 378h Oli" },
-    { PS_VoltageMonitor, "Voltage rails" },
-    { PS_Info, "Info" }
+    { ProgramSelect::Port80Reader, "Port 80h std" },
+    { ProgramSelect::Port84Reader, "Port 84h CPQ" },
+    { ProgramSelect::Port90Reader, "Port 90h PS/2" },
+    { ProgramSelect::Port300Reader, "Port 300h EISA" },
+    { ProgramSelect::Port378Reader, "Port 378h Oli" },
+    { ProgramSelect::VoltageMonitor, "Voltage rails" },
+    { ProgramSelect::Info, "Info" }
 };
 
-UserInterface::UserInterface(OLED* display, Size dispSize)
+UserInterface::UserInterface(OLED* display, Size dispSize) : display(display), dispSize(dispSize)
 {
-    this->display = display;
-    this->dispSize = dispSize;
     if (this->dispSize == Size::W128xH64) {
         displayHeight = 64;
     }
@@ -127,13 +125,13 @@ void UserInterface::NewData(const QueueData* buffer)
             bool refresh = true;
             switch (buffer->operation) {
 
-            case QO_Greetings: {
+            case QueueOperation::Greetings: {
                 drawText(display, font_12x16, "PicoPOST", 1, 1);
                 drawLine(display, 0, 18, 128, bottomOffsetSmall);
                 drawText(display, font_8x8, PROJ_STR_VER, 127 - (strlen(PROJ_STR_VER) * 8), 22);
             } break;
 
-            case QO_Volts: {
+            case QueueOperation::Volts: {
                 fillRect(display, 0, 9, 127, displayHeight - 1, WriteMode::SUBTRACT);
                 if (displayHeight == 32) {
                     sprintf(textBuffer[0], "%01.1f", buffer->volts5);
@@ -164,14 +162,14 @@ void UserInterface::NewData(const QueueData* buffer)
                 }
             } break;
 
-            case QO_P80Data:
-            case QO_P80ResetActive:
-            case QO_P80ResetCleared: {
+            case QueueOperation::P80Data:
+            case QueueOperation::P80ResetActive:
+            case QueueOperation::P80ResetCleared: {
                 HistoryShift();
                 fillRect(display, 0, 12, 127, displayHeight - 1, WriteMode::SUBTRACT);
-                if (buffer->operation == QO_P80ResetActive) {
+                if (buffer->operation == QueueOperation::P80ResetActive) {
                     sprintf(textBuffer[0], "R!");
-                } else if (buffer->operation == QO_P80ResetCleared) {
+                } else if (buffer->operation == QueueOperation::P80ResetCleared) {
                     sprintf(textBuffer[0], "R_");
                 } else {
                     sprintf(textBuffer[0], "%02X", buffer->data);
@@ -228,26 +226,26 @@ void UserInterface::NewData(const QueueData* buffer)
         // USB ACM serial output
         switch (buffer->operation) {
 
-        case QO_Greetings: {
+        case QueueOperation::Greetings: {
             printf("-- PicoPOST " PROJ_STR_VER " --\n");
             printf("%s\n", creditsLine);
         } break;
 
-        case QO_Volts: {
+        case QueueOperation::Volts: {
             printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f | -12 V @ %.2f\n",
                 tstamp, buffer->volts5, buffer->volts12, buffer->voltsN12);
         } break;
 
-        case QO_P80Data: {
+        case QueueOperation::P80Data: {
             printf("%10.3f | %02X @ %04Xh\n",
                 tstamp, buffer->data, buffer->address);
         } break;
 
-        case QO_P80ResetActive: {
+        case QueueOperation::P80ResetActive: {
             printf("Reset!\n");
         } break;
 
-        case QO_P80ResetCleared: {
+        case QueueOperation::P80ResetCleared: {
             printf("Reset cleared\n");
         } break;
 
@@ -263,18 +261,18 @@ void UserInterface::ClearBuffers()
     memset(textBuffer, '\0', sizeof(textBuffer));
 }
 
-const MenuEntry UserInterface::GetMenuEntry(uint index)
+MenuEntry UserInterface::GetMenuEntry(uint index)
 {
     if (index < currentMenu.size()) {
         return currentMenu.at(index);
     } else {
-        return { PS_MAX_PROG, "" };
+        return { ProgramSelect::MainMenu, "" };
     }
 }
 
 void UserInterface::HistoryShift()
 {
-    for (uint i = MAX_HISTORY - 1; i > 0; i--) {
-        memcpy(textBuffer[i], textBuffer[i - 1], MAX_VALUE_LEN);
+    for (uint i = c_maxHistory - 1; i > 0; i--) {
+        memcpy(textBuffer[i], textBuffer[i - 1], c_maxStrlen);
     }
 }

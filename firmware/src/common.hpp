@@ -3,48 +3,48 @@
 
 #include <stdint.h>
 
-typedef enum __picopost_common_phykeys {
+enum Key {
     KE_None = 0x00,
     
     KE_Up = 0x01,
     KE_Down = 0x02,
     KE_Select = 0x04,
     KE_Back = 0x08,
-} Key;
+};
 
 /**
  * @brief A list of the available applications
  * 
  */
-typedef enum __picopost_common_progselect {
-    PS_Port80Reader, ///< Reads port 80h and outputs data
-    PS_Port90Reader, ///< IBM PS/2s output to 90h
-    PS_Port84Reader, ///< Early Compaq outputs to 84h
-    PS_Port300Reader, ///< Some EISA systems output to 300h
-    PS_Port378Reader, ///< Olivettis output to 378h. Can we capture LPT?
-    PS_VoltageMonitor, ///< Monitors the 5V and 12V rails
+enum class ProgramSelect {
+    Port80Reader, ///< Reads port 80h and outputs data
+    Port90Reader, ///< IBM PS/2s output to 90h
+    Port84Reader, ///< Early Compaq outputs to 84h
+    Port300Reader, ///< Some EISA systems output to 300h
+    Port378Reader, ///< Olivettis output to 378h. Can we capture LPT?
+    VoltageMonitor, ///< Monitors the 5V and 12V rails
 
     // More stuff coming soon?
-    PS_Info,
+    Info,
 
-    PS_MAX_PROG
-} ProgramSelect;
+    MainMenu
+};
 
-typedef enum __picopost_commmon_operation {
-    QO_None,
+enum class QueueOperation : uint8_t {
+    None,
 
-    QO_Greetings,
-    QO_Credits,
+    Greetings,
+    Credits,
 
-    QO_P80Data,
-    QO_P80ResetActive,
-    QO_P80ResetCleared,
-    QO_Volts,
+    P80Data,
+    P80ResetActive,
+    P80ResetCleared,
+    Volts,
 
     // More stuff coming soon?
-} QueueOperation;
+};
 
-typedef struct __attribute__((packed)) __picopost_common_queuedata {
+struct __attribute__((packed)) QueueData {
     QueueOperation operation;    
     uint64_t timestamp;
 
@@ -54,7 +54,7 @@ typedef struct __attribute__((packed)) __picopost_common_queuedata {
     float volts5;
     float volts12;
     float voltsN12;
-} QueueData;
+};
 
 static const char creditsLine[] =
     "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";

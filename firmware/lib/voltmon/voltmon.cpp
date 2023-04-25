@@ -12,9 +12,8 @@
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 
-VoltMon::VoltMon(bool supportsN12)
+VoltMon::VoltMon(bool supportsN12) : useN12(supportsN12)
 {
-    useN12 = supportsN12;
     adc_init();
     adc_gpio_init(PIN_5V_MON);
     adc_gpio_init(PIN_12V_MON);
@@ -23,19 +22,19 @@ VoltMon::VoltMon(bool supportsN12)
     }
 }
 
-double VoltMon::Read5()
+double VoltMon::Read5() const
 {
     adc_select_input(ADC_5V_MON);
     return adc_read() * cfg_factor5V * cfg_adjust5V;
 }
 
-double VoltMon::Read12()
+double VoltMon::Read12() const
 {
     adc_select_input(ADC_12V_MON);
     return adc_read() * cfg_factor12V * cfg_adjust12V;
 }
 
-double VoltMon::ReadN12()
+double VoltMon::ReadN12() const
 {
     if (useN12) {
         adc_select_input(ADC_N12V_MON_R6);

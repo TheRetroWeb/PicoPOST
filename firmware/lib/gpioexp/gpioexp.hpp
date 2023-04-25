@@ -15,7 +15,11 @@
 
 class MCP23009 {
 public:
-    MCP23009(i2c_inst* bus, uint8_t addr);
+    MCP23009(i2c_inst* bus, uint8_t addr)
+        : bus(bus)
+        , addr(addr)
+    {
+    }
 
     bool IsConnected();
 
@@ -116,7 +120,6 @@ public:
      */
     void SetAll(uint8_t mask);
 
-protected:
 private:
     enum Registers : uint8_t {
         MCPREG_IODIR = 0x00, // pin direction

@@ -146,5 +146,6 @@ int main()
 {
     Application* app = Application::GetInstance();
     multicore_launch_core1(Application::UITask);
-    return app->PrimaryTask();
+    app->PrimaryTask();
+    return 0;
 }
