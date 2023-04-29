@@ -7,8 +7,8 @@
   * 
   */
 
-#ifndef __PICOPOST_PROJ_CALIB
-#define __PICOPOST_PROJ_CALIB
+#ifndef PICOPOST_PROJ_CALIB
+#define PICOPOST_PROJ_CALIB
 
 // 5V readout calibration
 #define CALIBADJ_5V      @CALIBADJ_5V@
@@ -19,4 +19,4 @@
 // -12V readout calibration
 #define CALIBADJ_N12V      @CALIBADJ_N12V@
 
-#endif // __PICOPOST_PROJ_CALIB
+#endif // PICOPOST_PROJ_CALIB

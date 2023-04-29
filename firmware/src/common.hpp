@@ -24,8 +24,8 @@ enum class ProgramSelect {
     Port378Reader, ///< Olivettis output to 378h. Can we capture LPT?
     VoltageMonitor, ///< Monitors the 5V and 12V rails
 
-    // More stuff coming soon?
     Info,
+    UpdateFW,
 
     MainMenu
 };

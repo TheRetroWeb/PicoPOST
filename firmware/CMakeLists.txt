@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 3.13)
 
 # initialize the SDK based on PICO_SDK_PATH
 
-## COMMENT AND EDIT THESE LINES TO SWITCH
-## BETWEEN LOCAL OR GIT SDK
+## UNCOMMENT THIS LINE TO SWITCH TO GIT-FETCHED SDK
 # set(PICO_SDK_FETCH_FROM_GIT on)
-set(PICO_SDK_PATH "C:/Users/Matthew Petry/Documents/PiPico Tools/pico-sdk")
+
+# you should be setting this from env variables, really
+# set(PICO_SDK_PATH "~/repo/pico-sdk")
 set(PICO_BOARD pico)
 
 include(pico_sdk_import.cmake)

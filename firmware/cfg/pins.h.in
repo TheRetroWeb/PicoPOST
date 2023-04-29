@@ -5,8 +5,8 @@
   * 
   **/
 
-#ifndef __PICOPOST_DEF_PINS
-#define __PICOPOST_DEF_PINS
+#ifndef PICOPOST_DEF_PINS
+#define PICOPOST_DEF_PINS
 
 #define PIN_ISA_D0 2
 #define PIN_ISA_D1 3
@@ -106,4 +106,4 @@
 // Pin IRQ source mask
 #define GPIOEXP_CFG_PINIRQ 0b00001111
 
-#endif // __PICOPOST_DEF_PINS
+#endif // PICOPOST_DEF_PINS

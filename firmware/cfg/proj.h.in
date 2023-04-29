@@ -7,8 +7,8 @@
   * 
   */
 
-#ifndef __PICOPOST_PROJ_CFG
-#define __PICOPOST_PROJ_CFG
+#ifndef PICOPOST_PROJ_CFG
+#define PICOPOST_PROJ_CFG
 
 // Main firmware major version
 #define PROJ_MAJ_VER   @pico_post_fw_VERSION_MAJOR@
@@ -24,4 +24,4 @@
 
 #define PROJ_STR_VER   STR(PROJ_MAJ_VER) "." STR(PROJ_MIN_VER) "." STR(PROJ_CDB_VER)
 
-#endif // __PICOPOST_PROJ_CFG
+#endif // PICOPOST_PROJ_CFG

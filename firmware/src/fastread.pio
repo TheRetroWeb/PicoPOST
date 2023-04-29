@@ -38,12 +38,12 @@ static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
     pio_sm_set_enabled(pio, sm, true);
 }
 
-static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm, const std::atomic<bool>& quitLoop)
+static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
 {
     io_rw_32 *rxfifo_shift = (io_rw_32*)&pio->rxf[sm];
-    while (pio_sm_is_rx_fifo_empty(pio, sm) && !quitLoop)
+    while (pio_sm_is_rx_fifo_empty(pio, sm) && pio_sm_is_claimed(pio, sm))
         tight_loop_contents();
-    if (quitLoop) {
+    if (!pio_sm_is_claimed(pio, sm)) {
         return 0U;
     }
     return (uint32_t)*rxfifo_shift;

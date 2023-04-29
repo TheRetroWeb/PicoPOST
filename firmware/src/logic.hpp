@@ -7,16 +7,31 @@
 #ifndef PICOPOST_LOGIC_HPP
 #define PICOPOST_LOGIC_HPP
 
+#include "voltmon.hpp"
+
+#include "pico/mutex.h"
 #include "pico/util/queue.h"
+#include <memory>
 
 class Logic {
 public:
+    Logic()
+    {
+        mutex_init(&quitLock);
+    }
+
+    /**
+     * @brief Initializes the required flags for correct loop execution.
+     * 
+     */
+    void Prepare();
+
     /**
      * @brief Stops currently running program, by letting it terminate operations
      * gracefully.
      *
      */
-    static void Stop();
+    void Stop();
 
     /**
      * @brief Reads I/O port and pushes data to the reader queue.
@@ -34,7 +49,7 @@ public:
      * different ports.
      *
      */
-    static void Port80Reader(queue_t* list, bool newPcb, const uint16_t baseAddress = 0x0080);
+    void AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress = 0x0080);
 
     /**
      * @brief Uses the ADC to probe the 5V and 12V supply rails
@@ -44,11 +59,29 @@ public:
      * sends data to the queue for the serial port (or OLED) to display.
      *
      */
-    static void VoltageMonitor(queue_t* list, bool newPcb);
+    void VoltageMonitor(queue_t* list, bool newPcb);
 
 private:
-    static volatile uint64_t lastReset;
-    static volatile bool quitLoop;
+    struct PortReaderPIO {
+        uint readerOffset { 0 };
+        int readerSm { -1 };
+
+#if defined(PICOPOST_RESET_HDLR)
+        uint resetOffset { 0 };
+        int resetSm { -1 };
+#endif
+    };
+
+    uint64_t lastReset { 0 };
+    volatile bool appRunning { false };
+    volatile bool quitLoop { false };
+    mutex_t quitLock {};
+
+    PortReaderPIO pioMap {};
+    std::unique_ptr<VoltMon> volts {};
+
+    bool GetQuitFlag();
+    void SetQuitFlag(bool _flag);
 };
 
 #endif // PICOPOST_LOGIC_HPP
