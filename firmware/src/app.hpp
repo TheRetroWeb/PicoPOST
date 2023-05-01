@@ -85,6 +85,8 @@ private:
     };
 
     enum class TextScrollStep : uint8_t {
+        DrawBitmap,
+        BitmapOK,
         DrawHeader,
         DrawBlock,
         Wait,
@@ -109,7 +111,7 @@ private:
 
     // 20ms debounce, see https://www.eejournal.com/article/ultimate-guide-to-switch-debounce-part-4/
     static const uint64_t c_debounceRate { 20000 };
-    static const size_t c_maxStrbuff { 20 };
+    static const size_t c_maxStrbuff { 14 };
 
     static std::unique_ptr<Application> instance;
 

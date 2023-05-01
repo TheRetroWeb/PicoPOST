@@ -25,6 +25,8 @@ public:
 
     void DrawHeader(OLEDLine content);
     void DrawFooter(OLEDLine content);
+    void DrawFullScreen(const Bitmap& bmp);
+    void DrawActions(const Bitmap& top, const Bitmap& middle, const Bitmap& bottom);
 
     void SetMenuContext(const std::vector<MenuEntry>& menu);
     void DrawMenu(uint index);

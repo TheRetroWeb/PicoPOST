@@ -1,6 +1,7 @@
 #include "app.hpp"
 
 // General utilites
+#include "bitmaps.hpp"
 #include "pins.h"
 #include "proj.h"
 
@@ -199,6 +200,35 @@ void Application::Keystroke()
         case KE_Select: {
             this->app_newSelect = this->ui->GetMenuEntry(this->app_currentMenuIdx).first;
             this->textScroll.stage = TextScrollStep::DrawHeader;
+            if (this->app_newSelect == ProgramSelect::Info) {
+                this->textScroll.stage = TextScrollStep::DrawBitmap;
+            }
+        } break;
+
+        default: {
+            // other key strokes not expected
+        } break;
+        }
+    } break;
+
+    case ProgramSelect::Info: {
+        switch (this->keyboard.current) {
+        case KE_Down: {
+            if (this->textScroll.stage == TextScrollStep::BitmapOK) {
+                this->textScroll.stage = TextScrollStep::DrawHeader;
+            }
+        } break;
+
+        case KE_Up: {
+            if (this->textScroll.stage != TextScrollStep::BitmapOK) {
+                this->textScroll.stage = TextScrollStep::DrawBitmap;
+            }
+        } break;
+
+        case KE_Back: {
+            this->app_newSelect = ProgramSelect::MainMenu;
+            this->app_newMenuIdx = this->app_currentMenuIdx;
+            this->app_currentMenuIdx = -1;
         } break;
 
         default: {
@@ -227,11 +257,11 @@ void Application::Keystroke()
 
 void Application::UserOutput()
 {
+    bool drawHeader = false;
     if (this->app_newSelect != this->app_currentSelect) {
         this->ui->ClearBuffers();
-        this->ui->ClearScreen();
         this->app_currentSelect = this->app_newSelect;
-        this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
+        drawHeader = true;
     }
 
     switch (this->app_currentSelect) {
@@ -244,8 +274,15 @@ void Application::UserOutput()
 
     case ProgramSelect::Info: {
         switch (this->textScroll.stage) {
+        case TextScrollStep::DrawBitmap: {
+            this->ui->DrawFullScreen(bmp_picoPost);
+            this->ui->DrawActions(bmp_back, bmp_empty, bmp_arrowDown);
+            this->textScroll.stage = TextScrollStep::BitmapOK;
+        } break;
+
         case TextScrollStep::DrawHeader: {
             this->ui->DrawHeader("PicoPOST " PROJ_STR_VER);
+            this->ui->DrawActions(bmp_back, bmp_arrowUp, bmp_empty);
             this->textScroll.sourceIdx = 0;
             this->textScroll.stage = TextScrollStep::DrawBlock;
         } break;
@@ -272,15 +309,25 @@ void Application::UserOutput()
             this->textScroll.sourceIdx = 0;
             this->textScroll.tick = 0;
         } break;
+
+        default: {
+            // other stages can simply do nothing :)
+        } break;
         }
     } break;
 
     case ProgramSelect::UpdateFW: {
+        this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
         this->ui->DrawFooter("Connect to PC");
         reset_usb_boot(0, 0);
     } break;
 
     default: {
+        if (drawHeader) {
+            this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
+            this->ui->DrawActions(bmp_back, bmp_empty, bmp_empty);
+        }
+    
         uint count = queue_get_level(&this->dataQueue);
         if (count > 0) {
             QueueData buffer;

@@ -42,10 +42,9 @@ void UserInterface::ClearScreen()
 void UserInterface::DrawHeader(OLEDLine content)
 {
     if (display != nullptr) {
+        display->clear();
         fillRect(display, 0, 0, 127, 8);
         drawText(display, font_8x8, content, 1, 1, WriteMode::SUBTRACT);
-        display->addBitmapImage(127 - bmp_back.width, 0,
-            bmp_back.width, bmp_back.height, bmp_back.image, WriteMode::SUBTRACT);
         display->sendBuffer();
     }
 }
@@ -53,8 +52,32 @@ void UserInterface::DrawHeader(OLEDLine content)
 void UserInterface::DrawFooter(OLEDLine content)
 {
     if (display != nullptr) {
-        fillRect(display, 0, 12, 127, displayHeight - 1, WriteMode::SUBTRACT);
+        fillRect(display, 0, 12, c_ui_yIconAlign - 1, displayHeight - 1, WriteMode::SUBTRACT);
         drawText(display, font_8x8, content, 2, 18);
+        display->sendBuffer();
+    }
+}
+
+void UserInterface::DrawFullScreen(const Bitmap& bmp)
+{
+    if (display != nullptr) {
+        display->clear();
+        display->addBitmapImage(0, 0, bmp.width, bmp.height, bmp.image);
+        display->sendBuffer();
+    }
+}
+
+void UserInterface::DrawActions(const Bitmap& top, const Bitmap& middle, const Bitmap& bottom)
+{
+    if (display != nullptr) {
+        const uint8_t iconAnchor = (displayHeight - c_ui_iconSize - 1) >> 1;
+        display->addBitmapImage(c_ui_yIconAlign, iconAnchor + c_ui_iconSize + 3,
+            bottom.width, bottom.height, bottom.image, WriteMode::INVERT);
+        display->addBitmapImage(c_ui_yIconAlign, iconAnchor,
+            middle.width, middle.height, middle.image, WriteMode::INVERT);
+        display->addBitmapImage(c_ui_yIconAlign, iconAnchor - c_ui_iconSize - 3,
+            top.width, top.height, top.image, WriteMode::INVERT);
+
         display->sendBuffer();
     }
 }
@@ -98,15 +121,15 @@ void UserInterface::DrawMenu(uint index)
         anchorOffset += itemHeight;
     }
 
-    const uint8_t iconAnchor = (displayHeight - bmp_select.height - 1) >> 1;
-    display->addBitmapImage(127 - bmp_select.width, iconAnchor,
+    const uint8_t iconAnchor = (displayHeight - c_ui_iconSize - 1) >> 1;
+    display->addBitmapImage(c_ui_yIconAlign, iconAnchor,
         bmp_select.width, bmp_select.height, bmp_select.image);
     if (index > 0) {
-        display->addBitmapImage(127 - bmp_arrowDown.width, iconAnchor - bmp_arrowUp.height - 3,
+        display->addBitmapImage(c_ui_yIconAlign, iconAnchor - c_ui_iconSize - 3,
             bmp_arrowUp.width, bmp_arrowUp.height, bmp_arrowUp.image);
     }
     if (index < currentMenu.size() - 1) {
-        display->addBitmapImage(127 - bmp_arrowDown.width, iconAnchor + bmp_arrowDown.height + 3,
+        display->addBitmapImage(c_ui_yIconAlign, iconAnchor + c_ui_iconSize + 3,
             bmp_arrowDown.width, bmp_arrowDown.height, bmp_arrowDown.image);
     }
 

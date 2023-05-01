@@ -1,7 +1,11 @@
 #ifndef PICOPOST_COMMON_HPP
 #define PICOPOST_COMMON_HPP
 
-#include <stdint.h>
+#include <cstdint>
+
+static const uint16_t c_maxBmpPayload { 1024 };
+static const uint8_t c_ui_iconSize { 8 };
+static const uint8_t c_ui_yIconAlign { 127 - c_ui_iconSize };
 
 enum Key {
     KE_None = 0x00,
@@ -54,6 +58,12 @@ struct __attribute__((packed)) QueueData {
     float volts5;
     float volts12;
     float voltsN12;
+};
+
+struct Bitmap {
+    const uint8_t width;
+    const uint8_t height;
+    const uint8_t image[c_maxBmpPayload];
 };
 
 static const char creditsLine[] =

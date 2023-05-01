@@ -15,10 +15,10 @@ void Logic::Stop()
 {
     while (appRunning) {
         SetQuitFlag(true);
-        
+
         if (pioMap.readerSm != -1) {
             pio_sm_set_enabled(pio0, pioMap.readerSm, false);
-            pio_sm_clear_fifos (pio0, pioMap.readerSm);
+            pio_sm_clear_fifos(pio0, pioMap.readerSm);
             pio_sm_restart(pio0, pioMap.readerSm);
             pio_sm_unclaim(pio0, pioMap.readerSm);
             pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
@@ -29,7 +29,7 @@ void Logic::Stop()
 #if defined(PICOPOST_RESET_HDLR)
         if (pioMap.resetSm != -1) {
             pio_sm_set_enabled(pio1, pioMap.resetSm, false);
-            pio_sm_clear_fifos (pio1, pioMap.resetSm);
+            pio_sm_clear_fifos(pio1, pioMap.resetSm);
             pio_sm_restart(pio1, pioMap.resetSm);
             pio_sm_unclaim(pio1, pioMap.resetSm);
             pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
@@ -45,7 +45,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     if (appRunning) {
         panic("Someone forgot to initialize some stuff...");
     }
-    
+
     appRunning = true;
 
 #if defined(PICOPOST_RESET_HDLR)
@@ -112,16 +112,22 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
 #endif
     }
 
-    pio_sm_set_enabled(pio0, pioMap.readerSm, false);
-    pio_sm_restart(pio0, pioMap.readerSm);
-    pio_sm_unclaim(pio0, pioMap.readerSm);
-    pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
+    if (pioMap.readerSm != -1) {
+        pio_sm_set_enabled(pio0, pioMap.readerSm, false);
+        pio_sm_restart(pio0, pioMap.readerSm);
+        pio_sm_unclaim(pio0, pioMap.readerSm);
+        pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
+        pioMap.readerSm = -1;
+    }
 
 #if defined(PICOPOST_RESET_HDLR)
-    pio_sm_set_enabled(pio1, pioMap.resetSm, false);
-    pio_sm_restart(pio1, pioMap.resetSm);
-    pio_sm_unclaim(pio1, pioMap.resetSm);
-    pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
+    if (pioMap.resetSm != -1) {
+        pio_sm_set_enabled(pio1, pioMap.resetSm, false);
+        pio_sm_restart(pio1, pioMap.resetSm);
+        pio_sm_unclaim(pio1, pioMap.resetSm);
+        pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
+        pioMap.resetSm = -1;
+    }
 #endif
 
     sleep_ms(100);
