@@ -39,6 +39,13 @@ void UserInterface::ClearScreen()
     }
 }
 
+void UserInterface::SetScreenBrightness(uint8_t level)
+{
+    if (display != nullptr) {
+        display->setContrast(level);
+    }
+}
+
 void UserInterface::DrawHeader(OLEDLine content)
 {
     if (display != nullptr) {

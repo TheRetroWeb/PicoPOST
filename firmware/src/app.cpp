@@ -116,11 +116,14 @@ __attribute__((noreturn)) void Application::UITask()
 
         // Handle pending keystrokes
         if (self->keyboard.debounceStage == DebouncerStep::PendingEvent) {
+            self->lastActivityTimer = time_us_64();
             self->Keystroke();
         }
 
         // Output data for user
         self->UserOutput();
+
+        self->StandbyTick();
     }
 }
 
@@ -332,11 +335,49 @@ void Application::UserOutput()
         if (count > 0) {
             QueueData buffer;
             queue_remove_blocking(&this->dataQueue, &buffer);
+            this->lastActivityTimer = time_us_64();
             this->ui->NewData(&buffer);
         } else {
             sleep_ms(5);
         }
     } break;
+    }
+}
+
+void Application::StandbyTick()
+{
+    uint8_t newBright = this->currBrightness;
+
+    switch (this->standby) {
+        case StandbyStage::Active: {
+            if (time_us_64() - this->lastActivityTimer > c_standbyTimer) {
+                this->standby = StandbyStage::Dimming;
+            }
+        } break;
+
+        case StandbyStage::Dimming: {
+            if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
+                newBright = c_maxBrightness;
+                this->standby = StandbyStage::Active;
+            } else {
+                newBright = this->currBrightness - c_brightnessStep;
+                if (newBright <= c_minBrightness) {
+                    this->standby = StandbyStage::Standby;
+                }
+            }
+        } break;
+
+        default: {
+            if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
+                newBright = c_maxBrightness;
+                this->standby = StandbyStage::Active;
+            }
+        } break;
+    }
+
+    if (this->currBrightness != newBright) {
+        this->currBrightness = newBright;
+        this->ui->SetScreenBrightness(this->currBrightness);
     }
 }
 

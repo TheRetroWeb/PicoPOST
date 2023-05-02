@@ -93,6 +93,13 @@ private:
         Quit
     };
 
+    enum class StandbyStage : uint8_t {
+        Active,
+        Dimming,
+        Standby,
+        Screensaver
+    };
+
     struct KeyboardState {
         uint8_t irqFlagPoll { 0x00 };
         uint8_t previousPress { 0x00 };
@@ -113,12 +120,18 @@ private:
     static const uint64_t c_debounceRate { 20000 };
     static const size_t c_maxStrbuff { 14 };
 
+    static const uint64_t c_standbyTimer { PICOPOST_STANDBY_TIMER * 1000000 };    
+    static const uint8_t c_minBrightness { 0x09 };
+    static const uint8_t c_maxBrightness { 0x7F };
+    static const uint8_t c_brightnessStep { 1 };
+
     static std::unique_ptr<Application> instance;
 
     void PollI2CKeypad();
     void PollGPIOKeypad();
     void Keystroke();
     void UserOutput();
+    void StandbyTick();
 
     std::unique_ptr<Logic> logic { nullptr };
 
@@ -133,6 +146,9 @@ private:
     int app_newMenuIdx { 0 };
     ProgramSelect app_currentSelect { ProgramSelect::MainMenu };
     ProgramSelect app_newSelect { ProgramSelect::MainMenu };
+    StandbyStage standby { StandbyStage::Active };
+    uint8_t currBrightness { c_maxBrightness };
+    uint64_t lastActivityTimer { 0 };
 
     MCP23009* hw_gpioexp { nullptr };
     pico_oled::OLED* hw_oled { nullptr };

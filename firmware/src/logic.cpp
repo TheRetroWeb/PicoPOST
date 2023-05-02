@@ -70,7 +70,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
         // If reset is active, this read operation blocks the loop until reset
         // goes low. Returns true only if a proper reset pulse occurred.
         // Returns false if no reset event is happening
-        auto resetPulse = Bus_FastReset_PinImage(pio1, pioMap.resetSm);
+        auto resetPulse = Bus_FastReset_IsHigh(pio1, pioMap.resetSm);
         switch (resetPulse) {
 
         case 0: { // Reset is not asserted. Clear reset cycle (if needed) and read bus.
@@ -111,7 +111,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
         }
 #endif
     }
-
+/*
     if (pioMap.readerSm != -1) {
         pio_sm_set_enabled(pio0, pioMap.readerSm, false);
         pio_sm_restart(pio0, pioMap.readerSm);
@@ -129,6 +129,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
         pioMap.resetSm = -1;
     }
 #endif
+*/
 
     sleep_ms(100);
     appRunning = false;

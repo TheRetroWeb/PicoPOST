@@ -22,6 +22,7 @@ public:
     UserInterface(pico_oled::OLED* display, pico_oled::Size dispSize);
 
     void ClearScreen();
+    void SetScreenBrightness(uint8_t level);
 
     void DrawHeader(OLEDLine content);
     void DrawFooter(OLEDLine content);

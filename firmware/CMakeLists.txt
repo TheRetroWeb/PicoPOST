@@ -67,6 +67,8 @@ pico_enable_stdio_uart(pico_post_fw 0)
 
 target_compile_definitions(pico_post_fw PRIVATE
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
+    PICOPOST_STANDBY_TIMER=15
+    # PICOPOST_RESET_HDLR ## Uncomment this line to enable reset pulse detection
 )
 
 # find includes

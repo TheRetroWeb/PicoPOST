@@ -59,15 +59,14 @@ static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
 
 .program Bus_FastReset
 .wrap_target
-    wait 1 pin 26               ; Wait for reset signal to transition high
-    set X, 0
+    wait 1 pin 22               ; Wait for reset signal to transition high
+    set X, 1                    ; Notify pin is high
     mov ISR, X
     push                        ; Block FIFO read for main program
-    wait 0 pin 26               ; Wait for reset signal to transition low
-    irq clear 0                 ; Notify SM to accept incoming reset reads
-    set X, 1
+    wait 0 pin 22               ; Wait for reset signal to transition low
+    set X, 0
     mov ISR, X
-    push                        ; Send a complete reset event and unlock FIFO
+    push                        ; Block again
 .wrap
 
 % c-sdk {
@@ -80,15 +79,15 @@ static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset, bool newPcb
     pio_sm_set_consecutive_pindirs(pio, sm, newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5, 1, false);
     pio_sm_config c = Bus_FastReset_program_get_default_config(offset);
 
-    sm_config_set_in_shift(&c, true, true, 1);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+    sm_config_set_in_shift(&c, false, true, 1);
+    // sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
     // Load & start!
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
 }
 
-static inline int Bus_FastReset_PinImage(PIO pio, uint sm)
+static inline int Bus_FastReset_IsHigh(PIO pio, uint sm)
 {
     if (pio_sm_is_rx_fifo_empty(pio, sm)) {
         return 0;
