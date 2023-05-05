@@ -36,12 +36,12 @@ __attribute__((noreturn)) void Application::LogicTask()
         } else {
             switch (self->app_currentSelect) {
 
-            /* TODO implement full stank reader
-            case ProgramSelect::PS_FullReader: {
-                self->ui->DrawFooter("Check serial output");
-                self->logic->FullReader(&self->dataQueue, self->UseNewRemote());
-            } break;
-            */
+                /* TODO implement full stank reader
+                case ProgramSelect::PS_FullReader: {
+                    self->ui->DrawFooter("Check serial output");
+                    self->logic->FullReader(&self->dataQueue, self->UseNewRemote());
+                } break;
+                */
 
             case ProgramSelect::Port80Reader: {
                 self->logic->AddressReader(&self->dataQueue, self->UseNewRemote());
@@ -187,6 +187,12 @@ void Application::Keystroke()
      *
      */
 
+    if (this->standby == StandbyStage::Screensaver) {
+        this->keyboard.debounceStage = DebouncerStep::Poll;
+        this->keyboard.current = KE_None;
+        return;
+    }
+
     switch (this->app_currentSelect) {
     case ProgramSelect::MainMenu: {
         switch (this->keyboard.current) {
@@ -273,6 +279,11 @@ void Application::UserOutput()
             this->app_currentMenuIdx = this->app_newMenuIdx;
             this->ui->DrawMenu(this->app_currentMenuIdx);
         }
+        if (this->standby == StandbyStage::Screensaver
+            && time_us_64() - this->lastSsaverFrameChange >= spr_toaster.frameDurationMs * 1000) {
+            this->ui->DrawScreenSaver(spr_toaster, this->lastSsaverFrame++ % spr_toaster.frameCount);
+            this->lastSsaverFrameChange = time_us_64();
+        }
     } break;
 
     case ProgramSelect::Info: {
@@ -330,7 +341,7 @@ void Application::UserOutput()
             this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
             this->ui->DrawActions(bmp_back, bmp_empty, bmp_empty);
         }
-    
+
         uint count = queue_get_level(&this->dataQueue);
         if (count > 0) {
             QueueData buffer;
@@ -349,30 +360,48 @@ void Application::StandbyTick()
     uint8_t newBright = this->currBrightness;
 
     switch (this->standby) {
-        case StandbyStage::Active: {
-            if (time_us_64() - this->lastActivityTimer > c_standbyTimer) {
-                this->standby = StandbyStage::Dimming;
-            }
-        } break;
+    case StandbyStage::Active: {
+        if (time_us_64() - this->lastActivityTimer > c_standbyTimer) {
+            this->standby = StandbyStage::Dimming;
+        }
+    } break;
 
-        case StandbyStage::Dimming: {
-            if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
-                newBright = c_maxBrightness;
-                this->standby = StandbyStage::Active;
-            } else {
-                newBright = this->currBrightness - c_brightnessStep;
-                if (newBright <= c_minBrightness) {
-                    this->standby = StandbyStage::Standby;
-                }
+    case StandbyStage::Dimming: {
+        if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
+            newBright = c_maxBrightness;
+            this->standby = StandbyStage::Active;
+        } else {
+            newBright = this->currBrightness - c_brightnessStep;
+            if (newBright <= c_minBrightness) {
+                this->standby = StandbyStage::Standby;
             }
-        } break;
+        }
+    } break;
 
-        default: {
-            if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
-                newBright = c_maxBrightness;
-                this->standby = StandbyStage::Active;
+    case StandbyStage::Standby: {
+        if (this->app_currentSelect == ProgramSelect::MainMenu
+            && (time_us_64() - this->lastActivityTimer > c_standbyTimer * 2)) {
+            this->lastSsaverFrame = 0;
+            this->lastSsaverFrameChange = time_us_64() - (spr_toaster.frameDurationMs * 2);
+            this->standby = StandbyStage::Screensaver;
+        } else if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
+            if (this->app_currentSelect == ProgramSelect::MainMenu) {
+                this->app_newMenuIdx = this->app_currentMenuIdx;
+                this->app_currentMenuIdx = -1;
             }
-        } break;
+            newBright = c_maxBrightness;
+            this->standby = StandbyStage::Active;
+        }
+    } break;
+
+    default: {
+        if (time_us_64() - this->lastActivityTimer <= c_standbyTimer) {
+            this->app_newMenuIdx = this->app_currentMenuIdx;
+            this->app_currentMenuIdx = -1;
+            newBright = c_maxBrightness;
+            this->standby = StandbyStage::Active;
+        }
+    } break;
     }
 
     if (this->currBrightness != newBright) {

@@ -56,6 +56,7 @@ target_link_libraries(pico_post_fw PUBLIC
     pico_stdlib
     pico_multicore
     pico_time
+    pico_rand
     hardware_pio
     hardware_i2c
     hardware_gpio

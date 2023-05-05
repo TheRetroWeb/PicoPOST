@@ -26,8 +26,9 @@ public:
 
     void DrawHeader(OLEDLine content);
     void DrawFooter(OLEDLine content);
-    void DrawFullScreen(const Bitmap& bmp);
-    void DrawActions(const Bitmap& top, const Bitmap& middle, const Bitmap& bottom);
+    void DrawFullScreen(const Icon& bmp);
+    void DrawScreenSaver(const Sprite& spr, uint8_t frameId);
+    void DrawActions(const Icon& top, const Icon& middle, const Icon& bottom);
 
     void SetMenuContext(const std::vector<MenuEntry>& menu);
     void DrawMenu(uint index);
@@ -41,18 +42,29 @@ public:
     inline size_t GetMenuSize() const { return currentMenu.size(); }
 
 private:
+    struct SpritePosition {
+        int16_t x;
+        int16_t y;
+
+        float invSlope;
+        int16_t offset;
+        bool fullyHidden;
+    };
+
     static const size_t c_maxHistory { 10 };
     static const size_t c_maxStrlen { 15 };
+    static const std::vector<MenuEntry> s_mainMenu;
 
     pico_oled::OLED* display { nullptr };
     pico_oled::Size dispSize { pico_oled::Size::W128xH32 };
+    const uint8_t displayWidth { 128 };
     uint8_t displayHeight { 32 };
     std::vector<MenuEntry> currentMenu {};
     char textBuffer[c_maxHistory][c_maxStrlen] { '\0' };
-
-    static const std::vector<MenuEntry> s_mainMenu;
+    SpritePosition spritePos { 0 };
 
     void HistoryShift();
+    void UpdateSpritePosition(const Sprite& spr);
 };
 
 #endif // PICOPOST_UI_HPP

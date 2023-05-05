@@ -6,6 +6,7 @@
 static const uint16_t c_maxBmpPayload { 1024 };
 static const uint8_t c_ui_iconSize { 8 };
 static const uint8_t c_ui_yIconAlign { 127 - c_ui_iconSize };
+static const uint8_t c_maxFrames { 10 };
 
 enum Key {
     KE_None = 0x00,
@@ -60,10 +61,20 @@ struct __attribute__((packed)) QueueData {
     float voltsN12;
 };
 
-struct Bitmap {
+using Bitmap = uint8_t[c_maxBmpPayload];
+
+struct Icon {
     const uint8_t width;
     const uint8_t height;
-    const uint8_t image[c_maxBmpPayload];
+    const Bitmap image;
+};
+
+struct Sprite {
+    const uint8_t width;
+    const uint8_t height;
+    const uint8_t frameCount;
+    const uint16_t frameDurationMs;
+    const Bitmap images[c_maxFrames];
 };
 
 static const char creditsLine[] =

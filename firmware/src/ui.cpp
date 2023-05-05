@@ -1,11 +1,13 @@
 #include "ui.hpp"
 #include "bitmaps.hpp"
 #include "hardware/gpio.h"
+#include "pico/rand.h"
 #include "pins.h"
 #include "proj.h"
 #include "shapeRenderer/ShapeRenderer.h"
 #include "textRenderer/TextRenderer.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace pico_oled;
 
@@ -29,6 +31,9 @@ UserInterface::UserInterface(OLED* display, Size dispSize)
     }
 
     this->currentMenu = s_mainMenu;
+    this->spritePos.invSlope = -2.0f; // 1/m
+    this->spritePos.fullyHidden = true;
+    UpdateSpritePosition(spr_toaster);
 }
 
 void UserInterface::ClearScreen()
@@ -65,7 +70,7 @@ void UserInterface::DrawFooter(OLEDLine content)
     }
 }
 
-void UserInterface::DrawFullScreen(const Bitmap& bmp)
+void UserInterface::DrawFullScreen(const Icon& bmp)
 {
     if (display != nullptr) {
         display->clear();
@@ -74,7 +79,19 @@ void UserInterface::DrawFullScreen(const Bitmap& bmp)
     }
 }
 
-void UserInterface::DrawActions(const Bitmap& top, const Bitmap& middle, const Bitmap& bottom)
+void UserInterface::DrawScreenSaver(const Sprite& spr, uint8_t frameId)
+{
+    if (display == nullptr) return;
+    if (frameId > spr.frameCount) return;
+
+    UpdateSpritePosition(spr);
+
+    display->clear();
+    display->addBitmapImage(this->spritePos.x, this->spritePos.y, spr.width, spr.height, spr.images[frameId]);
+    display->sendBuffer();
+}
+
+void UserInterface::DrawActions(const Icon& top, const Icon& middle, const Icon& bottom)
 {
     if (display != nullptr) {
         const uint8_t iconAnchor = (displayHeight - c_ui_iconSize - 1) >> 1;
@@ -312,4 +329,20 @@ void UserInterface::HistoryShift()
     for (uint i = c_maxHistory - 1; i > 0; i--) {
         memcpy(textBuffer[i], textBuffer[i - 1], c_maxStrlen);
     }
+}
+
+void UserInterface::UpdateSpritePosition(const Sprite& spr)
+{
+    if (spritePos.fullyHidden) {
+        spritePos.offset = static_cast<uint8_t>(get_rand_32() % (displayWidth / 2));
+        spritePos.y = -spr.height;
+    } else {
+        spritePos.y++;
+    }
+
+    // x = (y - c) / m
+    spritePos.x = static_cast<int16_t>((spritePos.y - spritePos.offset) * spritePos.invSlope);
+
+    spritePos.fullyHidden = (spritePos.x > displayWidth || spritePos.y > displayHeight);
+    spritePos.fullyHidden |= (spritePos.x < -spr.width || spritePos.y < -spr.height);
 }

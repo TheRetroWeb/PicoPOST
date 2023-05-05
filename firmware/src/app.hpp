@@ -149,6 +149,8 @@ private:
     StandbyStage standby { StandbyStage::Active };
     uint8_t currBrightness { c_maxBrightness };
     uint64_t lastActivityTimer { 0 };
+    uint64_t lastSsaverFrameChange { 0 };
+    uint8_t lastSsaverFrame { 0 };
 
     MCP23009* hw_gpioexp { nullptr };
     pico_oled::OLED* hw_oled { nullptr };
