@@ -53,11 +53,11 @@ information soon as it gets finalized.
 
 ###  2.2. Videos
 
-**Flying Toasters!**
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/YaeOhzFURtc" title="Flying Toasters!" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+**Flying Toasters!**\
+![https://img.youtube.com/vi/YaeOhzFURtc/hqdefault.jpg](https://www.youtube-nocookie.com/embed/YaeOhzFURtc)
 
-**Demo on IBM PS/2 Model 30/286**
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/QVEzR7sBcNQ" title="Demo on IBM PS/2 Model 30/286" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+**Demo on IBM PS/2 Model 30/286**\
+![https://img.youtube.com/vi/QVEzR7sBcNQ/hqdefault.jpg](https://www.youtube-nocookie.com/embed/QVEzR7sBcNQ)
 
 ###  2.1. <a name='Wishlist'></a>Wishlist
 
