@@ -54,10 +54,10 @@ information soon as it gets finalized.
 ###  2.2. Videos
 
 **Flying Toasters!**\
-![https://img.youtube.com/vi/YaeOhzFURtc/hqdefault.jpg](https://www.youtube.com/watch?v=YaeOhzFURtc)
+[![Flying Toasters!](https://img.youtube.com/vi/YaeOhzFURtc/hqdefault.jpg)](https://www.youtube.com/watch?v=YaeOhzFURtc)
 
 **Demo on IBM PS/2 Model 30/286**\
-![https://img.youtube.com/vi/QVEzR7sBcNQ/hqdefault.jpg](https://www.youtube.com/watch?v=QVEzR7sBcNQ)
+[![Demo on IBM PS/2 Model 30/286](https://img.youtube.com/vi/QVEzR7sBcNQ/hqdefault.jpg)](https://www.youtube.com/watch?v=QVEzR7sBcNQ)
 
 ###  2.1. <a name='Wishlist'></a>Wishlist
 
