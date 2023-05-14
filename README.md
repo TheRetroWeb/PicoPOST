@@ -24,42 +24,53 @@
 
 ![PicoPOST Logo](/readme_files/logo.png)
 
-**PicoPOST** is a PC diagnostic card for systems with, at least, an 8-bit ISA
-slot. It's based around the Raspberry Pi Pico, powered by an RP2040.
+**PicoPOST** is a PC diagnostic card for systems with, at least, an 8-bit ISA slot. It's based around the Raspberry Pi
+Pico, powered by an RP2040.
 
-PicoPOST is designed to provide many additional benefits over the basic POST
-cards that are commonly available from Chinese vendors on eBay and other sites.
+PicoPOST is designed to provide many additional benefits over the basic POST cards that are commonly available from
+Chinese vendors on eBay and other sites.
 
-This project is getting ready for public usage, with a few prototypes already in
-use for development purposes. More information soon as it gets finalized.
+This project is getting ready for public usage, with a few prototypes already in use for development purposes. More
+information soon as it gets finalized.
 
 ##  2. <a name='Implementedfeatures'></a>Implemented features
 
-- Simple user interface, with a graphical monochrome 128x32 OLED display and a
-  few buttons living on their own remote control
+- Simple user interface, with a graphical monochrome 128x32 OLED display and a few buttons living on their own remote
+  control
 - Port 80h readout, with 4-place output history
-- +5V and +12V voltage monitor
+- Port 90h readout, for IBM PS/2s
+- Port 84h reaodut, for Compaq machines*
+- Port 300h readout, for some EISA systems*
+- Port 378h readout, for some Olivetti machines*
+- Reset pulse detection**
+- +5V, +12V and -12V*** voltage monitor
+- Display is dimmed after 15s of inactivity to mitigate burn-in
+- Flying Toasters! screensaver after 30s of inactivity on the main menu
+
+*: We don't have a specimen handy, so we need confirmation from someone else out there.\
+**: It used to work at some point, now it's not doing anything. Maybe I'm not smart enough.\
+***: It's there as far as hardware goes, but I still need to figure out the right coefficients. Again, not smart enough.
+
+###  2.2. Videos
+
+**Flying Toasters!**
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/YaeOhzFURtc" title="Flying Toasters!" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+**Demo on IBM PS/2 Model 30/286**
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/QVEzR7sBcNQ" title="Demo on IBM PS/2 Model 30/286" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ###  2.1. <a name='Wishlist'></a>Wishlist
 
-More features are coming with the new rev 6 PCB and matching firmware. This
-readme will be updated accordingly. Expected features include:
-- -12V rail monitoring
-- Bus clock reader
-- Bus output readout for specific ports
-- Full bus activity trace
-- Improved remote control setup
-- ...
+New features have been implemented with the new rev 6 PCB and matching firmware. 
+- -12V rail monitoring (HW OK, FW almost there)
+- Full bus activity trace (HW OK, FW provisioned, but we need to make sure we are not missing data)
+- Bus clock reader (HW OK, FW TBD)
+- ... anything else, as long as the hardware allows it and someone implements it in firmware
 
 ##  3. <a name='Buildingthefirmware'></a>Building the firmware
 
 The firmware is built using the official Raspberry Pi RP2040 SDK. Follow the
-[official documentation](https://github.com/raspberrypi/pico-sdk#quick-start-your-own-project)
-for setting it up.
-
-The default CMake environment shipped with the repo expects the RP2040 SDK to be
-present at `~/repo/pico-sdk`. Feel free to edit the main CMakeLists.txt file so
-it can automatically fetch the SDK from Raspberry Pi's official repository.
+[official documentation](https://github.com/raspberrypi/pico-sdk#quick-start-your-own-project) for setting it up.
 
 The procedure is pretty straight-forward:
 1. Clone the repo
@@ -76,6 +87,7 @@ The procedure is pretty straight-forward:
    ```
 3. Prepare the build system with CMake
    ```
+   export PICO_SDK_PATH /path/to/pico/sdk
    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE \
        -DCMAKE_BUILD_TYPE:STRING=Release \
        -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/arm-none-eabi-gcc \
@@ -89,16 +101,19 @@ The procedure is pretty straight-forward:
    cmake --build ./build --config Release --target all -j $(nproc)
    ```
 
-If you're using an IDE like Visual Studio Code, you can follow the relevant build instructions
-in the [Pico SDK Getting Started guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf), or you can manually install the necessary
-extensions for C++ development and CMake build systems, then follow the
-configuration wizard for setting up the bare-metal ARM GCC compiler.
+If you're using an IDE like Visual Studio Code, you can follow the relevant build instructions in the
+[Pico SDK Getting Started guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf), or you can
+manually install the necessary extensions for C++ development and CMake build systems, then follow the configuration 
+wizard for setting up the bare-metal ARM GCC compiler.
 
 ##  4. <a name='Flashingthefirmware'></a>Flashing the firmware
 
-Like all RPi Pico software, keep the BOOTSEL button pressed while plugging the
-USB cable into the Pico itself. *(If the board is already powered, you can short
-the "Pico Reset" pins on the back of the card instead of removing the USB cable.)*
+In order to load new firmware, the Pico must be booted into UF2 mode.\
+If the board is powered off, keep the BOOTSEL button pressed while plugging the USB cable into the Pico itself.\
+If the board is already powered, you can short the "Pico Reset" pins on the back of the card instead of removing the USB
+cable.\
+Alternatively, if the board is powered via USB from a PC with a data cable, you can move to the Update FW menu entry.
+By pressing Enter, the Pico will then be rebooted into UF2 mode automatically.
 
 A mass storage device should be now mounted on your computer.
 
