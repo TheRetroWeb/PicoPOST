@@ -18,7 +18,7 @@ VoltMon::VoltMon(bool supportsN12) : useN12(supportsN12)
     adc_gpio_init(PIN_5V_MON);
     adc_gpio_init(PIN_12V_MON);
     if (useN12) {
-        adc_gpio_init(PIN_N12V_MON_R6);
+        adc_gpio_init(PIN_N12V_MON);
     }
 }
 
@@ -37,7 +37,7 @@ double VoltMon::Read12() const
 double VoltMon::ReadN12() const
 {
     if (useN12) {
-        adc_select_input(ADC_N12V_MON_R6);
+        adc_select_input(ADC_N12V_MON);
         return adc_read() * cfg_factorN12V * cfg_adjustN12V;
     } else {
         return 0.0;

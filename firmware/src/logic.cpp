@@ -85,9 +85,18 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
             // The readout from the FIFO should look a bit like this
             // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
             fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
+#if defined(PICOPOST_PC104)
+            uint16_t addr = ((fullRead & 0x0000FC00) >> 2) | ((fullRead & 0xFC000000) >> 26);
+                    addr |= ((fullRead & 0x00000300) << 6) | ((fullRead & 0x03000000) >> 18);
+            addr = Logic::MirrorBytes(addr);
+#else
             uint16_t addr = (fullRead & 0x0000FF00) + ((fullRead & 0xFF000000) >> 24);
+#endif
             if (addr == baseAddress) {
                 data = (fullRead & 0x00FF0000) >> 16;
+#if defined(PICOPOST_PC104)
+                data = Logic::MirrorBytes(data);
+#endif
                 qd.operation = QueueOperation::P80Data;
                 qd.timestamp = time_us_64() - lastReset;
                 qd.address = addr;
@@ -111,25 +120,25 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
         }
 #endif
     }
-/*
-    if (pioMap.readerSm != -1) {
-        pio_sm_set_enabled(pio0, pioMap.readerSm, false);
-        pio_sm_restart(pio0, pioMap.readerSm);
-        pio_sm_unclaim(pio0, pioMap.readerSm);
-        pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
-        pioMap.readerSm = -1;
-    }
+    /*
+        if (pioMap.readerSm != -1) {
+            pio_sm_set_enabled(pio0, pioMap.readerSm, false);
+            pio_sm_restart(pio0, pioMap.readerSm);
+            pio_sm_unclaim(pio0, pioMap.readerSm);
+            pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
+            pioMap.readerSm = -1;
+        }
 
-#if defined(PICOPOST_RESET_HDLR)
-    if (pioMap.resetSm != -1) {
-        pio_sm_set_enabled(pio1, pioMap.resetSm, false);
-        pio_sm_restart(pio1, pioMap.resetSm);
-        pio_sm_unclaim(pio1, pioMap.resetSm);
-        pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
-        pioMap.resetSm = -1;
-    }
-#endif
-*/
+    #if defined(PICOPOST_RESET_HDLR)
+        if (pioMap.resetSm != -1) {
+            pio_sm_set_enabled(pio1, pioMap.resetSm, false);
+            pio_sm_restart(pio1, pioMap.resetSm);
+            pio_sm_unclaim(pio1, pioMap.resetSm);
+            pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
+            pioMap.resetSm = -1;
+        }
+    #endif
+    */
 
     sleep_ms(100);
     appRunning = false;

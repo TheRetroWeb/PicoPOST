@@ -84,21 +84,23 @@ __attribute__((noreturn)) void Application::UITask()
     switch (self->hwMode) {
     case UserMode::I2CKeypad: {
         // Initialize button IRQ and debounced key readout routine
-        gpio_init(PIN_REMOTE_IRQ_R6);
-        gpio_set_dir(PIN_REMOTE_IRQ_R6, GPIO_IN);
-        gpio_pull_up(PIN_REMOTE_IRQ_R6);
+        gpio_init(PIN_REMOTE_IRQ);
+        gpio_set_dir(PIN_REMOTE_IRQ, GPIO_IN);
+        gpio_pull_up(PIN_REMOTE_IRQ);
     } break;
 
+#ifdef PICOPOST_PCB_REV5
     case UserMode::GPIOKeypad: {
         // Initialize button GPIOs and key handler routine
         // Buttons are active low, so enable internal pull-ups
-        uint pins[] = { PIN_KEY_UP_R5, PIN_KEY_DOWN_R5, PIN_KEY_SELECT_R5 };
+        uint pins[] = { PIN_KEY_UP, PIN_KEY_DOWN, PIN_KEY_SELECT };
         for (const uint pin : pins) {
             gpio_init(pin);
             gpio_set_dir(pin, GPIO_IN);
             gpio_pull_up(pin);
         }
     } break;
+#endif
 
     default: {
         // no keystrokes expected in this mode
@@ -133,7 +135,7 @@ void Application::PollI2CKeypad()
 
     case DebouncerStep::Poll: {
         if (time_us_64() >= this->keyboard.nextPoll) {
-            bool hwIrqPending = !gpio_get(PIN_REMOTE_IRQ_R6);
+            bool hwIrqPending = !gpio_get(PIN_REMOTE_IRQ);
             if (hwIrqPending) {
                 this->keyboard.irqFlagPoll = this->hw_gpioexp->GetInterruptCapture();
                 this->keyboard.debounceExpiry = time_us_64() + Application::c_debounceRate;

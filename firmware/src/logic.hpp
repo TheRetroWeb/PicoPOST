@@ -12,6 +12,7 @@
 #include "pico/mutex.h"
 #include "pico/util/queue.h"
 #include <memory>
+#include <type_traits>
 
 class Logic {
 public:
@@ -60,6 +61,20 @@ public:
      *
      */
     void VoltageMonitor(queue_t* list, bool newPcb);
+
+    template<typename T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
+    static T MirrorBytes(T input)
+    {
+        T out {};
+        size_t byte_len = sizeof(T);
+
+        while (byte_len--) {
+            out = (out << 1) | (input & 1);
+            input >>= 1;
+        }
+
+        return out;
+    }
 
 private:
     struct PortReaderPIO {

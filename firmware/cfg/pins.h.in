@@ -5,18 +5,6 @@
   * 
   **/
 
-#ifndef PICOPOST_DEF_PINS
-#define PICOPOST_DEF_PINS
-
-#define PIN_ISA_D0 2
-#define PIN_ISA_D1 3
-#define PIN_ISA_D2 4
-#define PIN_ISA_D3 5
-#define PIN_ISA_D4 6
-#define PIN_ISA_D5 7
-#define PIN_ISA_D6 8
-#define PIN_ISA_D7 9
-
 /**
  * @note **Hardware Notes!**
  * 
@@ -31,51 +19,8 @@
  * readout, it will be merged again into a 16-bit integer.
  */
 
-#define PIN_ISA_A0 10
-#define PIN_ISA_A1 11
-#define PIN_ISA_A2 12
-#define PIN_ISA_A3 13
-#define PIN_ISA_A4 14
-#define PIN_ISA_A5 15
-#define PIN_ISA_A6 16
-#define PIN_ISA_A7 17
-#define PIN_ISA_A8 10
-#define PIN_ISA_A9 11
-#define PIN_ISA_A10 12
-#define PIN_ISA_A11 13
-#define PIN_ISA_A12 14
-#define PIN_ISA_A13 15
-#define PIN_ISA_A14 16
-#define PIN_ISA_A15 17
-
-// Set high for A[0..7], set low for A[8..15]
-#define PIN_ADDRESS_BANK 19
-
-#define PIN_ISA_BRDY 18
-#define PIN_ISA_CLK_R6 20
-#define PIN_ISA_CLK_R5 -1
-#define PIN_ISA_RST_R6 22
-#define PIN_ISA_RST_R5 26
-
-#define PIN_REMOTE_IRQ_R6 21
-#define PIN_REMOTE_IRQ_R5 -1
-
-// -12V monitor
-#define PIN_N12V_MON_R6 26
-#define PIN_N12V_MON_R5 -1
-#define ADC_N12V_MON_R6 0
-#define ADC_N12V_MON_R5 -1
-
-// +5V monitor
-#define PIN_5V_MON 27
-#define ADC_5V_MON 1
-
-// +12V monitor
-#define PIN_12V_MON 28
-#define ADC_12V_MON 2
-
-#define PIN_I2C_SDA 0
-#define PIN_I2C_SCL 1
+#ifndef PICOPOST_DEF_PINS
+#define PICOPOST_DEF_PINS
 
 /**
  * @note **Hardware Notes!**
@@ -83,10 +28,6 @@
  * Some slow IO has been moved to an external MCP23009 I2C expander, placed on
  * the remote PCB. ONLY FOR PCB REV 6!
  */
-
-#define PIN_KEY_UP_R5 20
-#define PIN_KEY_DOWN_R5 21
-#define PIN_KEY_SELECT_R5 22
 
 #define GPIOEXP_KEY_UP 0
 #define GPIOEXP_KEY_DOWN 3
@@ -105,5 +46,86 @@
 
 // Pin IRQ source mask
 #define GPIOEXP_CFG_PINIRQ 0b00001111
+
+// Set high for A[0..7], set low for A[8..15]
+#define PIN_ADDRESS_BANK 19
+#define PIN_ISA_BRDY 18
+#define PIN_ISA_CLK 20
+#define PIN_ISA_RST 22
+
+#define PIN_REMOTE_IRQ 21
+
+// -12V monitor
+#define PIN_N12V_MON 26
+#define ADC_N12V_MON 0
+
+// +5V monitor
+#define PIN_5V_MON 27
+#define ADC_5V_MON 1
+
+// +12V monitor
+#define PIN_12V_MON 28
+#define ADC_12V_MON 2
+
+#define PIN_I2C_SDA 0
+#define PIN_I2C_SCL 1
+
+#ifdef PICOPOST_PC104
+
+#define PIN_ISA_D0 9
+#define PIN_ISA_D1 8
+#define PIN_ISA_D2 7
+#define PIN_ISA_D3 6
+#define PIN_ISA_D4 5
+#define PIN_ISA_D5 4
+#define PIN_ISA_D6 3
+#define PIN_ISA_D7 2
+
+#define PIN_ISA_A0 15
+#define PIN_ISA_A1 14
+#define PIN_ISA_A2 13
+#define PIN_ISA_A3 12
+#define PIN_ISA_A4 11
+#define PIN_ISA_A5 10
+#define PIN_ISA_A6 17
+#define PIN_ISA_A7 16
+#define PIN_ISA_A8 15
+#define PIN_ISA_A9 14
+#define PIN_ISA_A10 13
+#define PIN_ISA_A11 12
+#define PIN_ISA_A12 11
+#define PIN_ISA_A13 10
+#define PIN_ISA_A14 17
+#define PIN_ISA_A15 16
+
+#else // !PICOPOST_PC104
+
+#define PIN_ISA_D0 2
+#define PIN_ISA_D1 3
+#define PIN_ISA_D2 4
+#define PIN_ISA_D3 5
+#define PIN_ISA_D4 6
+#define PIN_ISA_D5 7
+#define PIN_ISA_D6 8
+#define PIN_ISA_D7 9
+
+#define PIN_ISA_A0 10
+#define PIN_ISA_A1 11
+#define PIN_ISA_A2 12
+#define PIN_ISA_A3 13
+#define PIN_ISA_A4 14
+#define PIN_ISA_A5 15
+#define PIN_ISA_A6 16
+#define PIN_ISA_A7 17
+#define PIN_ISA_A8 10
+#define PIN_ISA_A9 11
+#define PIN_ISA_A10 12
+#define PIN_ISA_A11 13
+#define PIN_ISA_A12 14
+#define PIN_ISA_A13 15
+#define PIN_ISA_A14 16
+#define PIN_ISA_A15 17
+
+#endif // PICOPOST_PC104
 
 #endif // PICOPOST_DEF_PINS
