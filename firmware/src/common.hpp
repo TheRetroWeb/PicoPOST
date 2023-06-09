@@ -78,6 +78,9 @@ struct Sprite {
 };
 
 static const char creditsLine[] =
+#if defined(PICOPOST_PC104)
+    "Built for PC/104 | "
+#endif
     "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";
 
 #endif // PICOPOST_COMMON_HPP
