@@ -12,7 +12,7 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.5.0
+    VERSION 0.5.1
 )
 
 # initialize the Raspberry Pi Pico SDK
@@ -23,7 +23,8 @@ set(CALIBADJ_5V 1.0)
 set(CALIBADJ_12V 1.0)
 set(CALIBADJ_N12V 1.0)
 
-set(PICOPOST_PC104_PCB "For the PC/104 PCB, some pins need remapping" OFF)
+option(PICOPOST_PC104_PCB "For the PC/104 PCB, some pins need remapping" OFF)
+option(PICOPOST_ALLOW_NO_REMOTE "Enable operation with no I2C remote, defaults to port 80h reader via serial" ON)
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
@@ -32,6 +33,8 @@ configure_file("cfg/calib.h.in" "cfg/calib.h")
 
 list(APPEND PROJ_INCS "${PROJECT_BINARY_DIR}/cfg")
 list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
+
+
 
 # import proj libraries
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/pico-oled")
@@ -68,19 +71,27 @@ target_link_libraries(pico_post_fw PUBLIC
 pico_enable_stdio_usb(pico_post_fw 1)
 pico_enable_stdio_uart(pico_post_fw 0)
 
-target_compile_definitions(pico_post_fw PRIVATE
-    PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
-    PICOPOST_STANDBY_TIMER=15
+set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
 
-    # PICOPOST_RESET_HDLR ## Uncomment this line to enable reset pulse detection
-)
+# Compile-time defines
+list(APPEND PROJ_DEFS PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150)
+list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
 if(PICOPOST_PC104_PCB)
-    target_compile_definitions(pico_post_fw PRIVATE
-        PICOPOST_PC104=1
-    )
+    list(APPEND PROJ_DEFS PICOPOST_PC104=1)
+    set(PICOPOST_UF2_FILENAME "${PICOPOST_UF2_FILENAME}-PC104")
 endif()
 unset(PICOPOST_PC104_PCB CACHE)
+
+if(PICOPOST_ALLOW_NO_REMOTE)
+    list(APPEND PROJ_DEFS PICOPOST_ALLOW_NO_REMOTE=1)
+    set(PICOPOST_UF2_FILENAME "${PICOPOST_UF2_FILENAME}-SerialOutput")
+endif()
+unset(PICOPOST_ALLOW_NO_REMOTE CACHE)
+
+target_compile_definitions(pico_post_fw PRIVATE
+    ${PROJ_DEFS}
+)
 
 # find includes
 target_include_directories(pico_post_fw PUBLIC
@@ -89,4 +100,5 @@ target_include_directories(pico_post_fw PUBLIC
 )
 
 # create map/bin/hex/uf2 file in addition to ELF.
+set_target_properties(pico_post_fw PROPERTIES OUTPUT_NAME "${PICOPOST_UF2_FILENAME}")
 pico_add_extra_outputs(pico_post_fw)
