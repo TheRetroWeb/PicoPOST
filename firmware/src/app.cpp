@@ -460,11 +460,14 @@ Application::Application()
         this->hw_gpioexp->SetInterruptEvent(GPIOEXP_CFG_PINIRQ);
         this->hw_gpioexp->SetPullUps(GPIOEXP_CFG_PINPOL);
     } else {
-        /*printf("GPIO Exp KO! -> Assuming PCB rev5\n");
+#if defined(PICOPOST_SUPPORT_REV5)
+        printf("GPIO Exp KO! -> Assuming PCB rev5\n");
         delete this->hw_gpioexp;
         this->hw_gpioexp = nullptr;
-        this->hwMode = UserMode::GPIOKeypad;*/
+        this->hwMode = UserMode::GPIOKeypad;
+#else
         BlinkenHalt(ErrorCodes::ERR_MissingGPIOExpander);
+#endif
     }
 
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
@@ -495,10 +498,13 @@ Application::Application()
         }
         this->hw_oled->setOrientation(dispFlip);
     } else {
-        /*delete this->hw_oled;
-        this->hwMode = Serial;
-        printf("OLED KO! -> Falling back to USB ACM\n");*/
+#if defined(PICOPOST_USB_FALLBACK)
+        delete this->hw_oled;
+        this->hwMode = UserMode::Serial;
+        printf("OLED KO! -> Falling back to USB ACM\n");
+#else
         BlinkenHalt(ErrorCodes::ERR_MissingDisplay);
+#endif
     }
 
     this->ui = new UserInterface(this->hw_oled, libOledSize);

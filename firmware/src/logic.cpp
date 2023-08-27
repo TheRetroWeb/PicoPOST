@@ -168,9 +168,9 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
 
             uint64_t tstamp = time_us_64() - lastReset;
             qd.timestamp = tstamp;
-            qd.volts5 = static_cast<float>(readFive / 1000.0);
-            qd.volts12 = static_cast<float>(readTwelve / 1000.0);
-            qd.voltsN12 = static_cast<float>(readNTwelve / 1000.0);
+            qd.volts5 = static_cast<float>(readFive);
+            qd.volts12 = static_cast<float>(readTwelve);
+            qd.voltsN12 = static_cast<float>(readNTwelve);
             queue_try_add(list, &qd);
 
             readerDelay = time_us_64() + 100000; // 100ms read delay

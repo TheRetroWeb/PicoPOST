@@ -12,16 +12,33 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.4.1
+    VERSION 0.4.2
 )
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 ## USER CONFIGURABLE PARAMS
-set(CALIBADJ_5V 1.0)
-set(CALIBADJ_12V 1.0)
-set(CALIBADJ_N12V 1.0)
+set(CALIBADJ_5V 1.030)
+set(CALIBADJ_12V 1.017)
+set(CALIBADJ_N12V 0.836)
+
+list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
+
+option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
+option(PICOPOST_RESET_HDLR "[EXPERIMENTAL] Enable reset pulse detection using PIO engines" OFF)
+option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
+option(PICOPOST_NEGATIVE12_APPROX "Turn off to see how bad my original calculations are" ON)
+
+if(DEFINED PICOPOST_USB_FALLBACK)
+    list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
+endif()
+if(DEFINED PICOPOST_RESET_HDLR)
+    list(APPEND PROJ_DEFS PICOPOST_RESET_HDLR)
+endif()
+if(DEFINED PICOPOST_SUPPORT_REV5)
+    list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
+endif()
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
@@ -68,8 +85,7 @@ pico_enable_stdio_uart(pico_post_fw 0)
 
 target_compile_definitions(pico_post_fw PRIVATE
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
-    PICOPOST_STANDBY_TIMER=15
-    # PICOPOST_RESET_HDLR ## Uncomment this line to enable reset pulse detection
+    ${PROJ_DEFS}
 )
 
 # find includes
