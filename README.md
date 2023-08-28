@@ -1,26 +1,12 @@
 # PicoPOST
 
-## Index
-<!-- vscode-markdown-toc -->
-* 1. [Introduction](#Introduction)
-* 2. [Implemented features](#Implementedfeatures)
-	* 2.1. [Wishlist](#Wishlist)
-* 3. [Building the firmware](#Buildingthefirmware)
-* 4. [Flashing the firmware](#Flashingthefirmware)
-* 5. [Directories](#Directories)
-* 6. [License](#License)
-
-<!-- vscode-markdown-toc-config
-	numbering=true
-	autoSave=true
-	/vscode-markdown-toc-config -->
-<!-- /vscode-markdown-toc -->
-
------------------------------
-
+> [!NOTE]
 > You can get a quick summary from the blog post! [Introducing the PicoPOST - The Retro Web Blog](https://blog.theretroweb.com/2023/01/03/introducing-the-picopost/)
 
-##  1. <a name='Introduction'></a>Introduction
+> [!NOTE]
+> More in-depth information can be found on our Wiki! [PicoPOST - The Retro Web Wiki](https://wiki.theretroweb.com/index.php?title=PicoPOST)
+
+## Introduction
 
 ![PicoPOST Logo](/readme_files/logo.png)
 
@@ -33,7 +19,7 @@ Chinese vendors on eBay and other sites.
 This project is getting ready for public usage, with a few prototypes already in use for development purposes. More
 information soon as it gets finalized.
 
-##  2. <a name='Implementedfeatures'></a>Implemented features
+## Implemented features
 
 - Simple user interface, with a graphical monochrome 128x32 OLED display and a few buttons living on their own remote
   control
@@ -43,31 +29,26 @@ information soon as it gets finalized.
 - Port 300h readout, for some EISA systems*
 - Port 378h readout, for some Olivetti machines*
 - Reset pulse detection**
-- +5V, +12V and -12V*** voltage monitor
+- +5V, +12V and -12V voltage monitor
 - Display is dimmed after 15s of inactivity to mitigate burn-in
 - Flying Toasters! screensaver after 30s of inactivity on the main menu
 
-*: We don't have a specimen handy, so we need confirmation from someone else out there.\
-**: It used to work at some point, now it's not doing anything. Maybe I'm not smart enough.\
-***: It's there as far as hardware goes, but I still need to figure out the right coefficients. Again, not smart enough.
+> *: We don't have a specimen handy, so we need confirmation from someone else out there.\
+> **: It used to work at some point, now it's not doing anything. Maybe I'm not smart enough.
 
-###  2.2. Videos
+### Videos
 
-**Flying Toasters!**\
-[![Flying Toasters!](https://img.youtube.com/vi/YaeOhzFURtc/hqdefault.jpg)](https://www.youtube.com/watch?v=YaeOhzFURtc)
+We are slowly compiling a [YouTube playlist](https://www.youtube.com/playlist?list=PLejCJef6DKnVJob0ycztrpl9FoBufaOPA) with a whole bunch of demonstration pieces, showing what the PicoPOST is capable of doing.\
+Stay tuned for more content!
 
-**Demo on IBM PS/2 Model 30/286**\
-[![Demo on IBM PS/2 Model 30/286](https://img.youtube.com/vi/QVEzR7sBcNQ/hqdefault.jpg)](https://www.youtube.com/watch?v=QVEzR7sBcNQ)
+### Wishlist
 
-###  2.1. <a name='Wishlist'></a>Wishlist
-
-New features have been implemented with the new rev 6 PCB and matching firmware. 
-- -12V rail monitoring (HW OK, FW almost there)
+New features have been implemented with the new rev 6 PCB and matching firmware.
 - Full bus activity trace (HW OK, FW provisioned, but we need to make sure we are not missing data)
 - Bus clock reader (HW OK, FW TBD)
 - ... anything else, as long as the hardware allows it and someone implements it in firmware
 
-##  3. <a name='Buildingthefirmware'></a>Building the firmware
+## Building the firmware
 
 The firmware is built using the official Raspberry Pi RP2040 SDK. Follow the
 [official documentation](https://github.com/raspberrypi/pico-sdk#quick-start-your-own-project) for setting it up.
@@ -106,23 +87,38 @@ If you're using an IDE like Visual Studio Code, you can follow the relevant buil
 manually install the necessary extensions for C++ development and CMake build systems, then follow the configuration 
 wizard for setting up the bare-metal ARM GCC compiler.
 
-##  4. <a name='Flashingthefirmware'></a>Flashing the firmware
+### Customize the firmware
 
-In order to load new firmware, the Pico must be booted into UF2 mode.\
-If the board is powered off, keep the BOOTSEL button pressed while plugging the USB cable into the Pico itself.\
-If the board is already powered, you can short the "Pico Reset" pins on the back of the card instead of removing the USB
-cable.\
-Alternatively, if the board is powered via USB from a PC with a data cable, you can move to the Update FW menu entry.
-By pressing Enter, the Pico will then be rebooted into UF2 mode automatically.
+There are a couple of details you might want to tune at compile time. More specifically, you may want to better calibrate
+the voltage monitor to show more accurate results.
 
-A mass storage device should be now mounted on your computer.
+In the primary `firmware\CMakeLists.txt` file, there are three variables you can set to skew the final ADC conversion result. These were added to account for resistor tolerances in the voltage divider circuits.
+- `CALIBADJ_5V`, correction factor for the +5V rail
+- `CALIBADJ_12V`, correction factor for the +12V rail
+- `CALIBADJ_N12V`, correction factor for the -12V rail
 
-Drag and drop (or copy and paste) the `.uf2` firmware file into the device.
-Once loaded, it will automatically restart and disconnect.
+Calculating these factors is pretty straight forward:
+- Install the default firmware
+- Connect PicoPOST to your computer of choice with a known good power supply
+- Enter `Voltage Monitor` mode
+- Turn on the computer
+- With a multimeter, measure the rail voltage as close as possible to PicoPOST
+- Compute the required calibration factor by dividing the measured value with the one shown by PicoPOST
+- Edit the `CALIBADJ` variable and build the firmware again
 
-If all went well, you should now be greeted by the main menu on the OLED display.
+## Flashing the firmware
 
-##  5. <a name='Directories'></a>Directories
+1. In order to load new firmware, the Pico must be booted into UF2 mode:
+   - If the board is powered off, keep the BOOTSEL button pressed while plugging the USB cable into the Pico itself.
+   - If the board is already powered, you can short the "Pico Reset" pins on the back of the card instead of removing the USB cable.
+   - Alternatively, if the board is powered via USB from a PC with a data cable, you can move to the `Update FW` menu entry. By pressing Enter, the Pico will then be rebooted into UF2 mode automatically.
+2. A mass storage device should be now mounted on your computer.
+3. Drag and drop (or copy and paste) the `.uf2` firmware file into the device.
+4. Once loaded, it will automatically restart and disconnect.
+5. If all went well, you should now be greeted by the main menu on the OLED display.\
+   You can verify the current firmware version by entering the `Info` page.
+
+## Directories
 
 ```
 datasheets/  Reference documentation for components used in the PicoPOST
@@ -130,7 +126,7 @@ firmware/    Source code for the PicoPOST firmware (written in C/C++ with the of
 pcb/         KiCad schematics and PCB design files
 ```
 
-##  6. <a name='License'></a>License
+## License
 
 The firmware portion of PicoPOST is licensed under the MIT license.\
 The hardware portion of PicoPOST is licensed under the CERN OHL v2 Permissive license.
