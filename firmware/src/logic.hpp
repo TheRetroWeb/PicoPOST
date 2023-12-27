@@ -15,6 +15,8 @@
 
 class Logic {
 public:
+    static constexpr uint16_t AllAddresses { 0x00 };
+
     Logic()
     {
         mutex_init(&quitLock);
@@ -22,7 +24,7 @@ public:
 
     /**
      * @brief Initializes the required flags for correct loop execution.
-     * 
+     *
      */
     void Prepare();
 
@@ -72,11 +74,6 @@ private:
     struct PortReaderPIO {
         uint readerOffset { 0 };
         int readerSm { -1 };
-
-#if defined(PICOPOST_RESET_HDLR)
-        uint resetOffset { 0 };
-        int resetSm { -1 };
-#endif
     };
 
     uint64_t lastReset { 0 };

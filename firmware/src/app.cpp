@@ -36,12 +36,9 @@ __attribute__((noreturn)) void Application::LogicTask()
         } else {
             switch (self->app_currentSelect) {
 
-                /* TODO implement full stank reader
-                case ProgramSelect::PS_FullReader: {
-                    self->ui->DrawFooter("Check serial output");
-                    self->logic->FullReader(&self->dataQueue, self->UseNewRemote());
-                } break;
-                */
+            case ProgramSelect::BusDump: {
+                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), Logic::AllAddresses);
+            } break;
 
             case ProgramSelect::Port80Reader: {
                 self->logic->AddressReader(&self->dataQueue, self->UseNewRemote());
@@ -340,6 +337,10 @@ void Application::UserOutput()
         if (drawHeader) {
             this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
             this->ui->DrawActions(bmp_back, bmp_empty, bmp_empty);
+
+            if (this->app_currentSelect == ProgramSelect::BusDump) {
+                this->ui->DrawFooter("Connect to PC");
+            }
         }
 
         uint count = queue_get_level(&this->dataQueue);

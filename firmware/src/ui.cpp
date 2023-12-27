@@ -17,6 +17,7 @@ const std::vector<MenuEntry> UserInterface::s_mainMenu = {
     { ProgramSelect::Port90Reader, "Port 90h PS/2" },
     { ProgramSelect::Port300Reader, "Port 300h EISA" },
     { ProgramSelect::Port378Reader, "Port 378h Oli" },
+    { ProgramSelect::BusDump, "Bus dump" },
     { ProgramSelect::VoltageMonitor, "Voltage rails" },
     { ProgramSelect::Info, "Info" },
     { ProgramSelect::UpdateFW, "Update FW" }
@@ -169,7 +170,7 @@ void UserInterface::NewData(const QueueData* buffer)
     const double tstamp = buffer->timestamp / 1000.0;
 
     // OLED data handler
-    if (display != nullptr) {
+    if (display != nullptr && buffer->printToOled) {
         const uint8_t bottomOffsetSmall = displayHeight - 1 - 13;
         const uint8_t bottomOffsetLarge = bottomOffsetSmall - 4;
         const uint8_t centerOffsetSmall = bottomOffsetSmall - 16;
@@ -297,7 +298,7 @@ void UserInterface::NewData(const QueueData* buffer)
     } break;
 
     case QueueOperation::P80ResetActive: {
-        printf("Reset!\n");
+        printf("Reset asserted!\n");
     } break;
 
     case QueueOperation::P80ResetCleared: {

@@ -76,14 +76,16 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
             continue;
 
         // The readout from the FIFO should look a bit like this
-        // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
+        // |  A[15:8]  |  Don't care  |  A[7:0]  |  D[7:0]  |
         uint32_t fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
-        uint16_t addr = (fullRead & 0x0000FF00) | ((fullRead & 0xFF000000) >> 24);
-        if (addr == baseAddress) {
+        uint16_t addr = ((fullRead & 0xFF000000) >> 16) | ((fullRead & 0x0000FF00) >> 8);
+        uint8_t data = (fullRead & 0x000000FF);
+        if (fullRead != 0 && (baseAddress == AllAddresses || addr == baseAddress)) {
             qd.operation = QueueOperation::P80Data;
             qd.timestamp = time_us_64() - lastReset;
             qd.address = addr;
-            qd.data = (fullRead & 0x00FF0000) >> 16;
+            qd.data = data;
+            qd.printToOled = (baseAddress != AllAddresses);
             queue_try_add(list, &qd);
         }
     }

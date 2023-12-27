@@ -10,7 +10,7 @@ static const uint8_t c_maxFrames { 10 };
 
 enum Key {
     KE_None = 0x00,
-    
+
     KE_Up = 0x01,
     KE_Down = 0x02,
     KE_Select = 0x04,
@@ -19,7 +19,7 @@ enum Key {
 
 /**
  * @brief A list of the available applications
- * 
+ *
  */
 enum class ProgramSelect {
     Port80Reader, ///< Reads port 80h and outputs data
@@ -27,6 +27,7 @@ enum class ProgramSelect {
     Port84Reader, ///< Early Compaq outputs to 84h
     Port300Reader, ///< Some EISA systems output to 300h
     Port378Reader, ///< Olivettis output to 378h. Can we capture LPT?
+    BusDump, ///< Output all IO writes
     VoltageMonitor, ///< Monitors the 5V and 12V rails
 
     Info,
@@ -50,15 +51,17 @@ enum class QueueOperation : uint8_t {
 };
 
 struct __attribute__((packed)) QueueData {
-    QueueOperation operation;    
-    uint64_t timestamp;
+    QueueOperation operation { QueueOperation::None };
+    uint64_t timestamp { 0 };
 
-    uint16_t address;
-    uint8_t data;
+    uint16_t address { 0 };
+    uint8_t data { 0 };
 
-    float volts5;
-    float volts12;
-    float voltsN12;
+    float volts5 { 0.f };
+    float volts12 { 0.f };
+    float voltsN12 { 0.f };
+
+    bool printToOled { true };
 };
 
 using Bitmap = uint8_t[c_maxBmpPayload];
@@ -77,7 +80,6 @@ struct Sprite {
     const Bitmap images[c_maxFrames];
 };
 
-static const char creditsLine[] =
-    "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";
+static const char creditsLine[] = "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";
 
 #endif // PICOPOST_COMMON_HPP
