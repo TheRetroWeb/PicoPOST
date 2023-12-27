@@ -12,7 +12,7 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.4.2
+    VERSION 0.4.3
 )
 
 # initialize the Raspberry Pi Pico SDK

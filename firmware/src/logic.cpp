@@ -25,18 +25,6 @@ void Logic::Stop()
             pioMap.readerSm = -1;
             pioMap.readerOffset = 0;
         }
-
-#if defined(PICOPOST_RESET_HDLR)
-        if (pioMap.resetSm != -1) {
-            pio_sm_set_enabled(pio1, pioMap.resetSm, false);
-            pio_sm_clear_fifos(pio1, pioMap.resetSm);
-            pio_sm_restart(pio1, pioMap.resetSm);
-            pio_sm_unclaim(pio1, pioMap.resetSm);
-            pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
-            pioMap.resetSm = -1;
-            pioMap.resetOffset = 0;
-        }
-#endif
     }
 }
 
@@ -47,89 +35,60 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     }
 
     appRunning = true;
+    const int c_rstPin = newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5;
 
-#if defined(PICOPOST_RESET_HDLR)
-    pioMap.resetOffset = pio_add_program(pio1, &Bus_FastReset_program);
-    pioMap.resetSm = pio_claim_unused_sm(pio1, true);
-    Bus_FastReset_init(pio1, pioMap.resetSm, pioMap.resetOffset, newPcb);
-#endif
+    gpio_init(c_rstPin);
+    gpio_set_dir(c_rstPin, GPIO_IN);
+    gpio_pull_down(c_rstPin);
 
     pioMap.readerOffset = pio_add_program(pio0, &Bus_FastRead_program);
     pioMap.readerSm = pio_claim_unused_sm(pio0, true);
     Bus_FastRead_init(pio0, pioMap.readerSm, pioMap.readerOffset);
 
-    uint8_t data = 0xFF;
-    uint32_t fullRead = 0x0000;
-    lastReset = time_us_64();
     QueueData qd;
-    int lastResetSts = 0;
 
-    // TODO Reset pulse detection is fucked up. Bypass for now
+    lastReset = time_us_64();
+    uint64_t resetDebounce = time_us_64();
+    ResetStage resetStage = gpio_get(c_rstPin) ? ResetStage::Active : ResetStage::Inactive;
+
     while (!GetQuitFlag()) {
-#if defined(PICOPOST_RESET_HDLR)
-        // If reset is active, this read operation blocks the loop until reset
-        // goes low. Returns true only if a proper reset pulse occurred.
-        // Returns false if no reset event is happening
-        auto resetPulse = Bus_FastReset_IsHigh(pio1, pioMap.resetSm);
-        switch (resetPulse) {
+        bool resetActive = gpio_get(c_rstPin);
 
-        case 0: { // Reset is not asserted. Clear reset cycle (if needed) and read bus.
-            if (lastResetSts != resetPulse) {
-                lastResetSts = resetPulse;
-                lastReset = time_us_64();
-                qd.operation = QueueOperation::P80ResetCleared;
-                queue_try_add(list, &qd);
-            }
-#endif
-
-            // The readout from the FIFO should look a bit like this
-            // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
-            fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
-            uint16_t addr = (fullRead & 0x0000FF00) + ((fullRead & 0xFF000000) >> 24);
-            if (addr == baseAddress) {
-                data = (fullRead & 0x00FF0000) >> 16;
-                qd.operation = QueueOperation::P80Data;
-                qd.timestamp = time_us_64() - lastReset;
-                qd.address = addr;
-                qd.data = data;
-                queue_try_add(list, &qd);
-            }
-#if defined(PICOPOST_RESET_HDLR)
-        } break;
-
-        case 1: { // Reset is asserted.
-            if (lastResetSts != resetPulse) {
-                lastResetSts = resetPulse;
-                qd.operation = QueueOperation::P80ResetActive;
-                queue_try_add(list, &qd);
-            }
-        } break;
-
-        default: {
-            // dunno
-        } break;
+        // Enable the pulse debouncer if the reset pin changes state while standing asserted or deasserted
+        if ((!resetActive && resetStage == ResetStage::Active)
+            || (resetActive && resetStage == ResetStage::Inactive)) {
+            resetStage = resetActive ? ResetStage::DebounceActive : ResetStage::DebounceInactive;
+            resetDebounce = time_us_64() + 50000;
         }
-#endif
-    }
-/*
-    if (pioMap.readerSm != -1) {
-        pio_sm_set_enabled(pio0, pioMap.readerSm, false);
-        pio_sm_restart(pio0, pioMap.readerSm);
-        pio_sm_unclaim(pio0, pioMap.readerSm);
-        pio_remove_program(pio0, &Bus_FastRead_program, pioMap.readerOffset);
-        pioMap.readerSm = -1;
+
+        // Save reset event once properly debounced
+        if (time_us_64() > resetDebounce
+            && ((resetStage == ResetStage::DebounceInactive && !resetActive) || (resetStage == ResetStage::DebounceActive && resetActive))) {
+            resetStage = resetActive ? ResetStage::Active : ResetStage::Inactive;
+            lastReset = time_us_64();
+            qd.operation = resetActive ? QueueOperation::P80ResetActive : QueueOperation::P80ResetCleared;
+            qd.timestamp = lastReset;
+            queue_try_add(list, &qd);
+        }
+
+        // If reset is active or debouncing, wait for it to go low before reading bus activity
+        if (resetStage != ResetStage::Inactive)
+            continue;
+
+        // The readout from the FIFO should look a bit like this
+        // |  A[7:0]  |  D[7:0]  |  A[15:8]  |  DC  |
+        uint32_t fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
+        uint16_t addr = (fullRead & 0x0000FF00) | ((fullRead & 0xFF000000) >> 24);
+        if (addr == baseAddress) {
+            qd.operation = QueueOperation::P80Data;
+            qd.timestamp = time_us_64() - lastReset;
+            qd.address = addr;
+            qd.data = (fullRead & 0x00FF0000) >> 16;
+            queue_try_add(list, &qd);
+        }
     }
 
-#if defined(PICOPOST_RESET_HDLR)
-    if (pioMap.resetSm != -1) {
-        pio_sm_set_enabled(pio1, pioMap.resetSm, false);
-        pio_sm_restart(pio1, pioMap.resetSm);
-        pio_sm_unclaim(pio1, pioMap.resetSm);
-        pio_remove_program(pio1, &Bus_FastReset_program, pioMap.resetOffset);
-        pioMap.resetSm = -1;
-    }
-#endif
-*/
+    gpio_deinit(c_rstPin);
 
     sleep_ms(100);
     appRunning = false;

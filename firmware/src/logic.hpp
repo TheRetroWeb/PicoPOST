@@ -62,6 +62,13 @@ public:
     void VoltageMonitor(queue_t* list, bool newPcb);
 
 private:
+    enum class ResetStage {
+        Inactive,
+        DebounceActive,
+        Active,
+        DebounceInactive
+    };
+
     struct PortReaderPIO {
         uint readerOffset { 0 };
         int readerSm { -1 };
