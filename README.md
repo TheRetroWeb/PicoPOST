@@ -28,13 +28,13 @@ information soon as it gets finalized.
 - Port 84h reaodut, for Compaq machines*
 - Port 300h readout, for some EISA systems*
 - Port 378h readout, for some Olivetti machines*
-- Reset pulse detection**
+- More complete bus activity dumping facility
+- Reset pulse detection
 - +5V, +12V and -12V voltage monitor
 - Display is dimmed after 15s of inactivity to mitigate burn-in
 - Flying Toasters! screensaver after 30s of inactivity on the main menu
 
-> *: We don't have a specimen handy, so we need confirmation from someone else out there.\
-> **: It used to work at some point, now it's not doing anything. Maybe I'm not smart enough.
+> *: We don't have a specimen handy, so we need confirmation from someone else out there.
 
 ### Videos
 
