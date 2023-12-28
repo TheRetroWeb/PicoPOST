@@ -6,9 +6,11 @@
 .program Bus_FastRead
 .wrap_target
     wait 1 pin 16               ; Wait for bus_ready signal to transition high
-    set pins, 1                 ; Address bank is set for reading A[15:8]
+    set pins, 0                 ; Address bank is set for reading A[15:8]
+    nop [ 2 ]
     in pins, 16                 ; Push address MSB and data to ISR in one shot
-    set pins, 0                 ; Flip address bank for reading A[7:0]
+    set pins, 1                 ; Flip address bank for reading A[7:0]
+    nop [ 2 ]
     in pins, 16                 ; Push address LSB and data to ISR in one shot
                                 ; SM auto-push will automatically send ISR to FIFO
     wait 0 pin 16               ; Wait for end of transaction before restarting
