@@ -33,7 +33,7 @@ public:
     void SetMenuContext(const std::vector<MenuEntry>& menu);
     void DrawMenu(uint index);
 
-    void NewData(const QueueData* buffer, const size_t elements);
+    void NewData(const QueueData* buffer, const size_t elements, const bool writeToOled = true);
 
     void ClearBuffers();
 

@@ -9,7 +9,9 @@
 
 #include "voltmon.hpp"
 
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
 #include "pico/mutex.h"
+#endif
 #include "pico/util/queue.h"
 #include <memory>
 
@@ -19,7 +21,9 @@ public:
 
     Logic()
     {
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
         mutex_init(&quitLock);
+#endif
     }
 
     /**
@@ -64,7 +68,7 @@ public:
     void VoltageMonitor(queue_t* list, bool newPcb);
 
 private:
-    enum class ResetStage {
+    enum class ResetStage : uint8_t {
         Inactive,
         DebounceActive,
         Active,
@@ -79,12 +83,14 @@ private:
     uint64_t lastReset { 0 };
     volatile bool appRunning { false };
     volatile bool quitLoop { false };
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
     mutex_t quitLock {};
+#endif
 
     PortReaderPIO pioMap {};
     std::unique_ptr<VoltMon> volts {};
 
-    bool GetQuitFlag();
+    __force_inline bool GetQuitFlag();
     void SetQuitFlag(bool _flag);
 };
 

@@ -289,6 +289,9 @@ void Application::UserOutput()
             this->ui->DrawFullScreen(bmp_picoPost);
             this->ui->DrawActions(bmp_back, bmp_empty, bmp_arrowDown);
             this->textScroll.stage = TextScrollStep::BitmapOK;
+
+            printf("PicoPOST " PROJ_STR_VER "\n");
+            printf("%s\n", creditsLine);
         } break;
 
         case TextScrollStep::DrawHeader: {
@@ -344,16 +347,20 @@ void Application::UserOutput()
         }
 
         const uint count = queue_get_level(&this->dataQueue);
-        if (count > 0) {
-            QueueData* dataList = new QueueData[count];
-            for (uint idx = 0; idx < count; idx++) {
-                queue_remove_blocking(&this->dataQueue, &dataList[idx]);
-            }
-            this->lastActivityTimer = time_us_64();
-            this->ui->NewData(dataList, count);
-            delete[] dataList;
+        if (count == 0) {
+            break;
         }
-        sleep_ms(1);
+
+        QueueData* dataList = new QueueData[count];
+        for (uint idx = 0; idx < count; idx++) {
+            while (!queue_try_remove(&this->dataQueue, &dataList[idx])) {
+                sleep_us(500);
+            }
+        }
+        this->lastActivityTimer = time_us_64();
+        printf("newdata %d\n", count);
+        this->ui->NewData(dataList, count, this->app_currentSelect != ProgramSelect::BusDump);
+        delete[] dataList;
     } break;
     }
 }

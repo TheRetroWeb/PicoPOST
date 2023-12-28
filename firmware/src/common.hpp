@@ -39,28 +39,19 @@ enum class ProgramSelect {
 enum class QueueOperation : uint8_t {
     None,
 
-    Greetings,
-    Credits,
-
     P80Data,
     P80ResetActive,
     P80ResetCleared,
     Volts,
-
-    // More stuff coming soon?
 };
 
 struct __attribute__((packed)) QueueData {
-    QueueOperation operation { QueueOperation::None };
     uint64_t timestamp { 0 };
-
-    uint16_t address { 0 };
-    uint8_t data { 0 };
-
     float volts5 { 0.f };
     float volts12 { 0.f };
-    float voltsN12 { 0.f };
-
+    uint16_t address { 0 };
+    uint8_t data { 0 };
+    QueueOperation operation { QueueOperation::None };
     bool printToOled { true };
 };
 

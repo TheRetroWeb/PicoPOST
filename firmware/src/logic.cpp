@@ -45,48 +45,69 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     pioMap.readerSm = pio_claim_unused_sm(pio0, true);
     Bus_FastRead_init(pio0, pioMap.readerSm, pioMap.readerOffset);
 
-    QueueData qd;
-
     lastReset = time_us_64();
-    uint64_t resetDebounce = time_us_64();
-    ResetStage resetStage = gpio_get(c_rstPin) ? ResetStage::Active : ResetStage::Inactive;
+
+    const uint32_t c_rstMask = (1UL << c_rstPin);
+    const uint32_t c_fifoMask = (1UL << (PIO_FSTAT_RXEMPTY_LSB + pioMap.readerSm));
+    const uint16_t c_addrMask = baseAddress == AllAddresses ? 0xFFFF : baseAddress;
+
+    bool resetActive = gpio_get(c_rstPin);
+    bool resetLastActive = resetActive;
+    uint64_t resetTimer = timer_hw->timerawl;
+    bool resetDebounce = false;
+
+    QueueData qd;
+    qd.printToOled = (baseAddress != AllAddresses);
 
     while (!GetQuitFlag()) {
-        bool resetActive = gpio_get(c_rstPin);
-
-        // Enable the pulse debouncer if the reset pin changes state while standing asserted or deasserted
-        if ((!resetActive && resetStage == ResetStage::Active)
-            || (resetActive && resetStage == ResetStage::Inactive)) {
-            resetStage = resetActive ? ResetStage::DebounceActive : ResetStage::DebounceInactive;
-            resetDebounce = time_us_64() + 50000;
+#if defined(PICOPOST_SIMPLE_RESET_HDLR)
+        if (sio_hw->gpio_in & c_rstMask)
+            continue;
+#else
+        resetActive = sio_hw->gpio_in & c_rstMask;
+        if (!resetDebounce) {
+            // Enable the pulse debouncer if the reset pin changes state while standing asserted or deasserted
+            if (resetActive != resetLastActive) {
+                resetDebounce = true;
+                resetTimer = timer_hw->timerawl + 50000;
+                resetLastActive = resetActive;
+                continue;
+            }
+        } else {
+            // Save reset event once properly debounced
+            if (timer_hw->timerawl > resetTimer && resetActive == resetLastActive) {
+                resetDebounce = false;
+                lastReset = time_us_64();
+                qd.operation = resetActive ? QueueOperation::P80ResetActive : QueueOperation::P80ResetCleared;
+                qd.timestamp = lastReset;
+                queue_add_blocking(list, &qd);
+            } else {
+                // If reset is active or debouncing, wait for it to go low before reading bus activity
+                continue;
+            }
         }
+        resetLastActive = resetActive;
+#endif
 
-        // Save reset event once properly debounced
-        if (time_us_64() > resetDebounce
-            && ((resetStage == ResetStage::DebounceInactive && !resetActive) || (resetStage == ResetStage::DebounceActive && resetActive))) {
-            resetStage = resetActive ? ResetStage::Active : ResetStage::Inactive;
-            lastReset = time_us_64();
-            qd.operation = resetActive ? QueueOperation::P80ResetActive : QueueOperation::P80ResetCleared;
-            qd.timestamp = lastReset;
-            queue_try_add(list, &qd);
-        }
+        if (pio0->fstat & c_fifoMask)
+            continue;
 
-        // If reset is active or debouncing, wait for it to go low before reading bus activity
-        if (resetStage != ResetStage::Inactive)
+        const uint32_t fullRead = pio0->rxf[pioMap.readerSm];
+        if (fullRead == 0)
             continue;
 
         // The readout from the FIFO should look a bit like this
-        // |  A[15:8]  |  Don't care  |  A[7:0]  |  D[7:0]  |
-        const uint32_t fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
-        const uint16_t addr = ((fullRead & 0xFF000000) >> 16) | ((fullRead & 0x0000FF00) >> 8);
-        const uint8_t data = (fullRead & 0x000000FF);
-        if (fullRead != 0 && (baseAddress == AllAddresses || addr == baseAddress)) {
+        // |  A[15:8]  |  Don't care  |  A[7:0]  |  D[7:0]
+        const auto readPtr = reinterpret_cast<const uint8_t*>(&fullRead);
+        const uint16_t addr = static_cast<uint16_t>((readPtr[3] << 8) | (readPtr[1]));
+        const uint8_t data = readPtr[0];
+        if (addr & c_addrMask) {
             qd.operation = QueueOperation::P80Data;
             qd.timestamp = time_us_64() - lastReset;
             qd.address = addr;
             qd.data = data;
-            qd.printToOled = (baseAddress != AllAddresses);
-            queue_try_add(list, &qd);
+            queue_add_blocking(list, &qd);
+            // TODO: Convert this routine to a DMA reader. Adding to queue is slow enough to stall the PIO
         }
     }
 
@@ -144,15 +165,23 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
 
 bool Logic::GetQuitFlag()
 {
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
     mutex_enter_blocking(&quitLock);
     bool _flag = quitLoop;
     mutex_exit(&quitLock);
     return _flag;
+#else
+    return quitLoop;
+#endif
 }
 
 void Logic::SetQuitFlag(bool _flag)
 {
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
     mutex_enter_blocking(&quitLock);
+#endif
     quitLoop = _flag;
+#if defined(PICOPOST_LOGIC_USE_MUTEX)
     mutex_exit(&quitLock);
+#endif
 }

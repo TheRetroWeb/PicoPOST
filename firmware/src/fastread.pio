@@ -4,17 +4,15 @@
 ;
 
 .program Bus_FastRead
-.wrap_target
-    wait 1 pin 16               ; Wait for bus_ready signal to transition high
-    set pins, 0                 ; Address bank is set for reading A[15:8]
+.side_set 1 opt
+    wait 1 pin 16    side 0     ; Wait for bus_ready signal to transition high
     nop [ 2 ]
-    in pins, 16                 ; Push address MSB and data to ISR in one shot
-    set pins, 1                 ; Flip address bank for reading A[7:0]
+    in pins, 16      side 1     ; Push address MSB and data to ISR in one shot
     nop [ 2 ]
-    in pins, 16                 ; Push address LSB and data to ISR in one shot
+    in pins, 16      side 0     ; Push address LSB and data to ISR in one shot
                                 ; SM auto-push will automatically send ISR to FIFO
-    wait 0 pin 16               ; Wait for end of transaction before restarting
-.wrap                           ; Profit?
+                                
+    wait 0 pin 16               ; Profit?
 
 % c-sdk {
 #include "pins.h"
@@ -23,32 +21,21 @@
 static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
 {
     pio_gpio_init(pio, PIN_ADDRESS_BANK);
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ADDRESS_BANK, 1, true);
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_D0, 17, false);
-    
+
     pio_sm_config c = Bus_FastRead_program_get_default_config(offset);
-    sm_config_set_set_pins(&c, PIN_ADDRESS_BANK, 1);
+
+    sm_config_set_sideset_pins(&c, PIN_ADDRESS_BANK);
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ADDRESS_BANK, 1, true);
     sm_config_set_in_pins(&c, PIN_ISA_D0);
-    sm_config_set_clkdiv(&c, 3.0);
+    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_D0, 17, false);
     sm_config_set_in_shift(&c, true, true, 32);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+
+    sm_config_set_clkdiv(&c, 1.8);
 
     // Load & start!
     pio_sm_init(pio, sm, offset, &c);
     pio_sm_set_enabled(pio, sm, true);
-}
-
-static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
-{
-    if (pio_sm_is_rx_fifo_empty(pio, sm)) return 0U;
-
-    io_ro_32 *rxfifo_shift = (io_ro_32*)&pio->rxf[sm];
-    while (pio_sm_is_rx_fifo_empty(pio, sm) && pio_sm_is_claimed(pio, sm))
-        tight_loop_contents();
-    if (!pio_sm_is_claimed(pio, sm)) {
-        return 0U;
-    }
-    return (uint32_t)*rxfifo_shift;
 }
 
 %}
