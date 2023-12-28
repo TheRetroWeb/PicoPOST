@@ -432,6 +432,16 @@ Application::Application()
     // unresponsive. Delay everything by some arbitrary amount of time
     sleep_ms(150);
 
+#if defined(PICOPOST_OVERCLOCK)
+    // OC RP2040 to 200 MHz for better performance
+    printf("Waiting for board to stabilize... ");
+    busy_wait_ms(250);
+    printf("Overclocking... ");
+    vreg_set_voltage(VREG_VOLTAGE_1_30);
+    busy_wait_ms(250);
+    set_sys_clock_khz(200000, true);
+#endif
+
     // Initialize data queue for async, multi-threaded data output
     queue_init(&this->dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
 

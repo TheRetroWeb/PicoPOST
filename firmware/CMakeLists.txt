@@ -28,12 +28,16 @@ list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
 option(PICOPOST_NEGATIVE12_APPROX "Turn off to see how bad my original calculations are" ON)
+option(PICOPOST_OVERCLOCK "[EXPERIMENTAL] Overclock RP2040 to 200MHz" ON)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
 endif()
 if(PICOPOST_SUPPORT_REV5)
     list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
+endif()
+if(PICOPOST_OVERCLOCK)
+    list(APPEND PROJ_DEFS PICOPOST_OVERCLOCK)
 endif()
 
 # output configuration
