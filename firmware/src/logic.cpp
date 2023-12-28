@@ -77,9 +77,9 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
 
         // The readout from the FIFO should look a bit like this
         // |  A[15:8]  |  Don't care  |  A[7:0]  |  D[7:0]  |
-        uint32_t fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
-        uint16_t addr = ((fullRead & 0xFF000000) >> 16) | ((fullRead & 0x0000FF00) >> 8);
-        uint8_t data = (fullRead & 0x000000FF);
+        const uint32_t fullRead = Bus_FastRead_PinImage(pio0, pioMap.readerSm);
+        const uint16_t addr = ((fullRead & 0xFF000000) >> 16) | ((fullRead & 0x0000FF00) >> 8);
+        const uint8_t data = (fullRead & 0x000000FF);
         if (fullRead != 0 && (baseAddress == AllAddresses || addr == baseAddress)) {
             qd.operation = QueueOperation::P80Data;
             qd.timestamp = time_us_64() - lastReset;
@@ -118,20 +118,17 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
 
     double readFive = 0.0;
     double readTwelve = 0.0;
-    double readNTwelve = 0.0;
     uint64_t readerDelay = time_us_64();
 
     while (!GetQuitFlag()) {
         if (time_us_64() >= readerDelay) {
             readFive = volts->Read5();
             readTwelve = volts->Read12();
-            readNTwelve = volts->ReadN12();
 
             uint64_t tstamp = time_us_64() - lastReset;
             qd.timestamp = tstamp;
             qd.volts5 = static_cast<float>(readFive);
             qd.volts12 = static_cast<float>(readTwelve);
-            qd.voltsN12 = static_cast<float>(readNTwelve);
             queue_try_add(list, &qd);
 
             readerDelay = time_us_64() + 100000; // 100ms read delay

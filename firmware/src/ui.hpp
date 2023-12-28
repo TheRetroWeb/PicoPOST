@@ -33,7 +33,7 @@ public:
     void SetMenuContext(const std::vector<MenuEntry>& menu);
     void DrawMenu(uint index);
 
-    void NewData(const QueueData* buffer);
+    void NewData(const QueueData* buffer, const size_t elements);
 
     void ClearBuffers();
 
@@ -62,6 +62,7 @@ private:
     std::vector<MenuEntry> currentMenu {};
     char textBuffer[c_maxHistory][c_maxStrlen] { '\0' };
     SpritePosition spritePos { 0 };
+    uint16_t m_lastData { 0x0100 };
 
     void HistoryShift();
     void UpdateSpritePosition(const Sprite& spr);

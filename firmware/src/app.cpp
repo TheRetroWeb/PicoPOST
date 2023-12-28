@@ -343,15 +343,17 @@ void Application::UserOutput()
             }
         }
 
-        uint count = queue_get_level(&this->dataQueue);
+        const uint count = queue_get_level(&this->dataQueue);
         if (count > 0) {
-            QueueData buffer;
-            queue_remove_blocking(&this->dataQueue, &buffer);
+            QueueData* dataList = new QueueData[count];
+            for (uint idx = 0; idx < count; idx++) {
+                queue_remove_blocking(&this->dataQueue, &dataList[idx]);
+            }
             this->lastActivityTimer = time_us_64();
-            this->ui->NewData(&buffer);
-        } else {
-            sleep_ms(5);
+            this->ui->NewData(dataList, count);
+            delete[] dataList;
         }
+        sleep_ms(1);
     } break;
     }
 }
