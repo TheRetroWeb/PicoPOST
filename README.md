@@ -118,6 +118,11 @@ Calculating these factors is pretty straight forward:
 5. If all went well, you should now be greeted by the main menu on the OLED display.\
    You can verify the current firmware version by entering the `Info` page.
 
+## Interested in helping?
+- Submit issues and pull requests!
+- Join us in the #picopost channel in [The Retro Web discord server](https://discord.gg/TdD4tqQ7fv)
+- Join us and other developers of retro Pico hardware (such as PicoGUS and PicoMEM) in the [Retro Pico Hardware discord server](https://discord.gg/QBUkpPqFa5)
+
 ## Directories
 
 ```
