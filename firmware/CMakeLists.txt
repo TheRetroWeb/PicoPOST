@@ -25,7 +25,7 @@ set(CALIBADJ_N12V 0.836)
 
 list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
-option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
+option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" ON)
 option(PICOPOST_RESET_HDLR "[EXPERIMENTAL] Enable reset pulse detection using PIO engines" ON)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
 option(PICOPOST_NEGATIVE12_APPROX "Turn off to see how bad my original calculations are" ON)

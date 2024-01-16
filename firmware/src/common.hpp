@@ -78,6 +78,6 @@ struct Sprite {
 };
 
 static const char creditsLine[] =
-    "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";
+    "Powered by The Retro Web | Hi VCFMW, and thanks to Ian Scott (polpo)! ";
 
 #endif // PICOPOST_COMMON_HPP

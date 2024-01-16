@@ -183,7 +183,7 @@ void UserInterface::NewData(const QueueData* buffer)
         case QueueOperation::Greetings: {
             drawText(display, font_12x16, "PicoPOST", 1, 1);
             drawLine(display, 0, 18, 128, bottomOffsetSmall);
-            drawText(display, font_8x8, PROJ_STR_VER, 127 - (strlen(PROJ_STR_VER) * 8), 22);
+            drawText(display, font_8x8, "VCFMW", 127 - (strlen(PROJ_STR_VER) * 8), 22);
         } break;
 
         case QueueOperation::Volts: {
@@ -282,7 +282,7 @@ void UserInterface::NewData(const QueueData* buffer)
     switch (buffer->operation) {
 
     case QueueOperation::Greetings: {
-        printf("-- PicoPOST " PROJ_STR_VER " --\n");
+        printf("-- PicoPOST@VCFMW --\n");
         printf("%s\n", creditsLine);
     } break;
 
