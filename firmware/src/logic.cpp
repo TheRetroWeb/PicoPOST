@@ -135,7 +135,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     appRunning = false;
 }
 
-void Logic::VoltageMonitor(queue_t* list, bool newPcb)
+void Logic::VoltageMonitor(queue_t* list)
 {
     if (appRunning) {
         panic("Someone forgot to initialize some stuff...");
@@ -147,7 +147,7 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
     gpio_put(PICO_SMPS_MODE_PIN, true);
 
     if (volts == nullptr) {
-        volts = std::make_unique<VoltMon>(newPcb);
+        volts = std::make_unique<VoltMon>();
     }
 
     QueueData qd = {
@@ -157,20 +157,17 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
 
     double readFive = 0.0;
     double readTwelve = 0.0;
-    double readNTwelve = 0.0;
     uint64_t readerDelay = time_us_64();
 
     while (!GetQuitFlag()) {
         if (time_us_64() >= readerDelay) {
             readFive = volts->Read5();
             readTwelve = volts->Read12();
-            readNTwelve = volts->ReadN12();
 
             uint64_t tstamp = time_us_64() - lastReset;
             qd.timestamp = tstamp;
             qd.volts5 = static_cast<float>(readFive);
             qd.volts12 = static_cast<float>(readTwelve);
-            qd.voltsN12 = static_cast<float>(readNTwelve);
             queue_try_add(list, &qd);
 
             readerDelay = time_us_64() + 100000; // 100ms read delay

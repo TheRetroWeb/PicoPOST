@@ -12,23 +12,21 @@ set(PICO_BOARD pico)
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.4.2
+    VERSION 0.4.3
 )
 
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 ## USER CONFIGURABLE PARAMS
-set(CALIBADJ_5V 1.030)
-set(CALIBADJ_12V 1.017)
-set(CALIBADJ_N12V 0.836)
+set(CALIBADJ_5V 1.000)
+set(CALIBADJ_12V 1.000)
 
 list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
-option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" ON)
+option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
 option(PICOPOST_RESET_HDLR "[EXPERIMENTAL] Enable reset pulse detection using PIO engines" ON)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
-option(PICOPOST_NEGATIVE12_APPROX "Turn off to see how bad my original calculations are" ON)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)

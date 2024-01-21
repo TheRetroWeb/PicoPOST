@@ -58,7 +58,6 @@ struct __attribute__((packed)) QueueData {
 
     float volts5;
     float volts12;
-    float voltsN12;
 };
 
 using Bitmap = uint8_t[c_maxBmpPayload];
@@ -78,6 +77,6 @@ struct Sprite {
 };
 
 static const char creditsLine[] =
-    "Powered by The Retro Web | Hi VCFMW, and thanks to Ian Scott (polpo)! ";
+    "Powered by The Retro Web | HW, fireTwoOneNine | SW, TheRealZago ";
 
 #endif // PICOPOST_COMMON_HPP
