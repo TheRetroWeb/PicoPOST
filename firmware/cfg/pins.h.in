@@ -60,12 +60,6 @@
 #define PIN_REMOTE_IRQ_R6 21
 #define PIN_REMOTE_IRQ_R5 -1
 
-// -12V monitor
-#define PIN_N12V_MON_R6 26
-#define PIN_N12V_MON_R5 -1
-#define ADC_N12V_MON_R6 0
-#define ADC_N12V_MON_R5 -1
-
 // +5V monitor
 #define PIN_5V_MON 27
 #define ADC_5V_MON 1

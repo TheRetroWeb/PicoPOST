@@ -9,10 +9,6 @@ pico_sdk_init()
 
 list(APPEND VOLT_DEFS)
 
-if(PICOPOST_NEGATIVE12_APPROX)
-    list(APPEND VOLT_DEFS PICOPOST_NEGATIVE12_APPROX)
-endif()
-
 add_library(volt_mon voltmon.cpp)
 
 target_link_libraries(volt_mon pico_stdlib hardware_adc)

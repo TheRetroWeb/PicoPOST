@@ -32,7 +32,7 @@ __attribute__((noreturn)) void Application::LogicTask()
     while (true) {
         self->logic->Prepare();
         if (self->hwMode == UserMode::Serial) {
-            self->logic->AddressReader(&self->dataQueue, false, 1008);
+            self->logic->AddressReader(&self->dataQueue, false);
         } else {
             switch (self->app_currentSelect) {
 
@@ -64,7 +64,7 @@ __attribute__((noreturn)) void Application::LogicTask()
             } break;
 
             case ProgramSelect::VoltageMonitor: {
-                self->logic->VoltageMonitor(&self->dataQueue, self->UseNewRemote());
+                self->logic->VoltageMonitor(&self->dataQueue);
             } break;
 
             default: {
@@ -295,7 +295,7 @@ void Application::UserOutput()
         } break;
 
         case TextScrollStep::DrawHeader: {
-            this->ui->DrawHeader("PicoPOST@VCFMW");
+            this->ui->DrawHeader("PicoPOST " PROJ_STR_VER);
             this->ui->DrawActions(bmp_back, bmp_arrowUp, bmp_empty);
             this->textScroll.sourceIdx = 0;
             this->textScroll.stage = TextScrollStep::DrawBlock;
@@ -473,14 +473,13 @@ Application::Application()
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
     bool dispType = false;
     bool dispSize = false;
-    bool dispFlip = true;
+    bool dispFlip = false;
     pico_oled::Size libOledSize = pico_oled::Size::W128xH32;
     if (this->UseNewRemote()) {
         auto gpioConfig = this->hw_gpioexp->GetAll();
         dispType = gpioConfig & (1 << GPIOEXP_IN_DISPTYPE);
         dispSize = gpioConfig & (1 << GPIOEXP_IN_DISPSIZE);
-        // Disabled for VCFMW demo! Don't compile release builds with this!
-        // dispFlip = gpioConfig & (1 << GPIOEXP_IN_DISPROT); 
+        dispFlip = gpioConfig & (1 << GPIOEXP_IN_DISPROT); 
     }
     if (dispSize) {
         libOledSize = pico_oled::Size::W128xH64;

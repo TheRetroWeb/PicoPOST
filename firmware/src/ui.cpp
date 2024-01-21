@@ -183,7 +183,7 @@ void UserInterface::NewData(const QueueData* buffer)
         case QueueOperation::Greetings: {
             drawText(display, font_12x16, "PicoPOST", 1, 1);
             drawLine(display, 0, 18, 128, bottomOffsetSmall);
-            drawText(display, font_8x8, "VCFMW", 127 - (strlen(PROJ_STR_VER) * 8), 22);
+            drawText(display, font_8x8, PROJ_STR_VER, 127 - (strlen(PROJ_STR_VER) * 8), 22);
         } break;
 
         case QueueOperation::Volts: {
@@ -191,29 +191,21 @@ void UserInterface::NewData(const QueueData* buffer)
             if (displayHeight == 32) {
                 sprintf(textBuffer[0], "%01.1f", buffer->volts5);
                 sprintf(textBuffer[1], "%02.1f", buffer->volts12);
-                sprintf(textBuffer[2], "%02.1f", buffer->voltsN12);
 
                 drawText(display, font_5x8, "+5V", 2, 9);
                 drawText(display, font_8x8, textBuffer[0], 2, bottomOffsetSmall);
 
-                drawText(display, font_5x8, "+12V", 42, 9);
-                drawText(display, font_8x8, textBuffer[1], 42, bottomOffsetSmall);
-
-                drawText(display, font_5x8, "-12V", 82, 9);
-                drawText(display, font_8x8, textBuffer[2], 82, bottomOffsetSmall);
+                drawText(display, font_5x8, "+12V", 50, 9);
+                drawText(display, font_8x8, textBuffer[1], 50, bottomOffsetSmall);
             } else if (displayHeight == 64) {
                 sprintf(textBuffer[0], "%01.2f", buffer->volts5);
                 sprintf(textBuffer[1], "%02.2f", buffer->volts12);
-                sprintf(textBuffer[2], "%02.2f", buffer->voltsN12);
 
                 drawText(display, font_5x8, "+5V", 4, 11);
                 drawText(display, font_8x8, textBuffer[0], 4, 23);
 
                 drawText(display, font_5x8, "+12V", 67, 11);
                 drawText(display, font_8x8, textBuffer[1], 67, 23);
-
-                drawText(display, font_5x8, "-12V", 46, 37);
-                drawText(display, font_8x8, textBuffer[2], 46, 49);
             }
         } break;
 
@@ -282,13 +274,13 @@ void UserInterface::NewData(const QueueData* buffer)
     switch (buffer->operation) {
 
     case QueueOperation::Greetings: {
-        printf("-- PicoPOST@VCFMW --\n");
+        printf("-- PicoPOST " PROJ_STR_VER " --\n");
         printf("%s\n", creditsLine);
     } break;
 
     case QueueOperation::Volts: {
-        printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f | -12 V @ %.2f\n",
-            tstamp, buffer->volts5, buffer->volts12, buffer->voltsN12);
+        printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f\n",
+            tstamp, buffer->volts5, buffer->volts12);
     } break;
 
     case QueueOperation::P80Data: {
