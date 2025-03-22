@@ -65,7 +65,7 @@ public:
      * sends data to the queue for the serial port (or OLED) to display.
      *
      */
-    void VoltageMonitor(queue_t* list, bool newPcb);
+    void VoltageMonitor(queue_t* list);
 
 private:
     enum class ResetStage : uint8_t {

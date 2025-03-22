@@ -34,15 +34,13 @@
 
 class VoltMon {
 public:
-    explicit VoltMon(bool supportsN12);
+    explicit VoltMon();
 
     double Read5() const;
     double Read12() const;
-    double ReadN12() const;
 
     uint16_t Raw5() const;
     uint16_t Raw12() const;
-    uint16_t RawN12() const;
 
 private:
     static constexpr double cfg_adc_mVref { 3.260 };
@@ -89,47 +87,6 @@ private:
     static constexpr double cfg_12V_coefficient { (cfg_12V_R2 + cfg_12V_R1) / cfg_12V_R2 };
     static constexpr double cfg_12V_adjust { CALIBADJ_12V };
     static constexpr double cfg_12V_factor { (cfg_adc_mVStep * cfg_12V_coefficient) * cfg_12V_adjust };
-
-    /**
-     * @brief Voltage divider coefficient for the -12V rail
-     *
-     * @par
-     * This one is beyond cursed. There's linear behavior from circa -9.5V
-     * downwards. Above that, it's fucked. There's logarithmic behavior once the
-     * clamping diodes start working and the resulting clamping voltage
-     * saturates the ADC anyway.
-     * I've decided to give up, truncate the results above a certain "defined
-     * good point" and be happy with it anyway.
-     *
-     * @par
-     * This measuring point uses a known stable 5V supply from the PicoPOST
-     * itself as a potential reference, instead of GND. This makes for an
-     * interesting mess of a calculation.
-     *
-     * @par
-     * My brain has decided calculations are expensive and hard to understand.
-     * Approximated line it is. I trust SPICE models, eventually tune the adjust
-     * value to skew results closer to taste.
-     *
-     * @par
-     * As of the ATX Specification 2.1, the acceptable range for the -12V rail is
-     * [10800 mV, 13200 mV]. You probably don't have anything running off the -12V
-     * rail anyway, so not much to worry about :3
-     *
-     */
-    static constexpr double cfg_N12V_adjust { CALIBADJ_N12V };
-#if defined(PICOPOST_NEGATIVE12_APPROX)
-    static constexpr double cfg_N12V_slope { 0.0062118251 };
-    static constexpr double cfg_N12V_offset { -34.0124236502 };
-#else
-    static constexpr double cfg_N12V_R1 { 68000.0 };
-    static constexpr double cfg_N12V_R2 { 10000.0 };
-    static constexpr double cfg_N12V_coefficient { (cfg_N12V_R2 + cfg_N12V_R1) / cfg_N12V_R2 };
-    static constexpr double cfg_N12V_factor { -(cfg_adc_mVStep * cfg_N12V_coefficient * cfg_N12V_adjust) };
-    static constexpr double cfg_N12V_offset { 16.842 };
-#endif
-
-    bool useN12 { false };
 };
 
 #endif // PICOPOST_LIB_VOLTMON

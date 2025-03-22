@@ -117,7 +117,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     appRunning = false;
 }
 
-void Logic::VoltageMonitor(queue_t* list, bool newPcb)
+void Logic::VoltageMonitor(queue_t* list)
 {
     if (appRunning) {
         panic("Someone forgot to initialize some stuff...");
@@ -129,7 +129,7 @@ void Logic::VoltageMonitor(queue_t* list, bool newPcb)
     gpio_put(PICO_SMPS_MODE_PIN, true);
 
     if (volts == nullptr) {
-        volts = std::make_unique<VoltMon>(newPcb);
+        volts = std::make_unique<VoltMon>();
     }
 
     QueueData qd = {

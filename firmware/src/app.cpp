@@ -61,7 +61,7 @@ __attribute__((noreturn)) void Application::LogicTask()
             } break;
 
             case ProgramSelect::VoltageMonitor: {
-                self->logic->VoltageMonitor(&self->dataQueue, self->UseNewRemote());
+                self->logic->VoltageMonitor(&self->dataQueue);
             } break;
 
             default: {

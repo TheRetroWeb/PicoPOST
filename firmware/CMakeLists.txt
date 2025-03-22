@@ -2,12 +2,16 @@ cmake_minimum_required(VERSION 3.13)
 
 # initialize the SDK based on PICO_SDK_PATH
 
-## UNCOMMENT THIS LINE TO SWITCH TO GIT-FETCHED SDK
+# # UNCOMMENT THIS LINE TO SWITCH TO GIT-FETCHED SDK
 # set(PICO_SDK_FETCH_FROM_GIT on)
 
 # you should be setting this from env variables, really
 # set(PICO_SDK_PATH "~/repo/pico-sdk")
 set(PICO_BOARD pico)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PICO_DEOPTIMIZED_DEBUG 1)
+endif()
 
 include(pico_sdk_import.cmake)
 
@@ -18,27 +22,28 @@ project(pico_post_fw
 # initialize the Raspberry Pi Pico SDK
 pico_sdk_init()
 
-## USER CONFIGURABLE PARAMS
+# # USER CONFIGURABLE PARAMS
 set(CALIBADJ_5V 1.030)
 set(CALIBADJ_12V 1.017)
-set(CALIBADJ_N12V 0.836)
 
 list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
 option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
-option(PICOPOST_NEGATIVE12_APPROX "Turn off to see how bad my original calculations are" ON)
 option(PICOPOST_OVERCLOCK "[EXPERIMENTAL] Overclock RP2040 to 200MHz" ON)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
 endif()
+
 if(PICOPOST_SUPPORT_REV5)
     list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
 endif()
+
 if(PICOPOST_OVERCLOCK)
     list(APPEND PROJ_DEFS PICOPOST_OVERCLOCK)
 endif()
+
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
@@ -77,6 +82,7 @@ target_link_libraries(pico_post_fw PUBLIC
     hardware_pio
     hardware_i2c
     hardware_gpio
+    hardware_dma
     ${PROJ_LIBS}
 )
 
