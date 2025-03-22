@@ -142,10 +142,10 @@ private:
     queue_t dataQueue;
     UserInterface* ui { nullptr };
 
-    int app_currentMenuIdx { -1 };
+    int app_currentMenuIdx { 0 };
     int app_newMenuIdx { 0 };
     ProgramSelect app_currentSelect { ProgramSelect::MainMenu };
-    ProgramSelect app_newSelect { ProgramSelect::MainMenu };
+    ProgramSelect app_newSelect { ProgramSelect::Port80Reader };
     StandbyStage standby { StandbyStage::Active };
     uint8_t currBrightness { c_maxBrightness };
     uint64_t lastActivityTimer { 0 };
