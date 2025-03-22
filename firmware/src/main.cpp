@@ -10,15 +10,16 @@
 
 // System libs
 #include "pico/multicore.h"
-#include "pico/stdlib.h"
-#include <string.h>
+#include "hardware/irq.h"
 
 int main()
 {
     sleep_ms(10);
 
-    Application::GetInstance();
+    // Disable IRQ for DMA
+    irq_set_enabled(DMA_IRQ_0, false);
 
+    Application::GetInstance();
     multicore_launch_core1(Application::LogicTask);
     Application::UITask();
 
