@@ -9,7 +9,9 @@
 #include "logic.hpp"
 
 // System libs
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/vreg.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
 #include <cstdio>
@@ -120,7 +122,9 @@ __attribute__((noreturn)) void Application::UITask()
         // Output data for user
         self->UserOutput();
 
-        self->StandbyTick();
+        if (self->hwMode != UserMode::Serial) {
+            self->StandbyTick();
+        }
     }
 }
 

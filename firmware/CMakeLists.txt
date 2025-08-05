@@ -89,6 +89,8 @@ target_link_libraries(pico_post_fw PUBLIC
 pico_enable_stdio_usb(pico_post_fw 1)
 pico_enable_stdio_uart(pico_post_fw 0)
 
+set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
+
 target_compile_definitions(pico_post_fw PRIVATE
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
     ${PROJ_DEFS}
@@ -101,4 +103,5 @@ target_include_directories(pico_post_fw PUBLIC
 )
 
 # create map/bin/hex/uf2 file in addition to ELF.
+set_target_properties(pico_post_fw PROPERTIES OUTPUT_NAME "${PICOPOST_UF2_FILENAME}")
 pico_add_extra_outputs(pico_post_fw)
