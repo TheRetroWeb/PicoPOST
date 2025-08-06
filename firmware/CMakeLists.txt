@@ -47,7 +47,6 @@ list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
 option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
-option(PICOPOST_OVERCLOCK "[EXPERIMENTAL] Overclock RP2040 to 200MHz" ON)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
@@ -56,11 +55,6 @@ endif()
 if(PICOPOST_SUPPORT_REV5)
     list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
 endif()
-
-if(PICOPOST_OVERCLOCK)
-    list(APPEND PROJ_DEFS PICOPOST_OVERCLOCK)
-endif()
-
 
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
@@ -99,7 +93,6 @@ target_link_libraries(pico_post_fw PUBLIC
     hardware_pio
     hardware_i2c
     hardware_gpio
-    hardware_dma
     ${PROJ_LIBS}
 )
 
@@ -109,7 +102,11 @@ pico_enable_stdio_uart(pico_post_fw 0)
 set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
 
 target_compile_definitions(pico_post_fw PRIVATE
+    REQ_CLOCK_KHZ=300000
+    QUEUE_DEPTH=8192
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
+    PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
+    PICO_FLASH_SPI_CLKDIV=4
     ${PROJ_DEFS}
 )
 

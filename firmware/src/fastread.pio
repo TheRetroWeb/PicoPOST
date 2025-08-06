@@ -3,14 +3,15 @@
 ; GPIOs normally allow. PIO FTW!
 ;
 
+; Bus ready pin
+.define public PIN_ISA_BRDY 18
+
 .program Bus_FastRead
 .side_set 1 opt
-    wait 1 pin 16    side 0     ; Wait for bus_ready signal to transition high
-    nop [ 2 ]
-    in pins, 16      side 1     ; Push address MSB and data to ISR in one shot
-    nop [ 2 ]
-    in pins, 16      side 0     ; Push address LSB and data to ISR in one shot
-                                ; SM auto-push will automatically send ISR to FIFO
-                                
-    wait 0 pin 16               ; Profit?
+    wait 1 gpio PIN_ISA_BRDY   side 0     ; Wait for bus_ready signal to transition high
+    in pins, 16 [ 4 ]          side 1     ; Push address MSB and data to ISR in one shot, then set bank switching to low-byte
+    nop [ 4 ]                  side 1     ; Wait for mux to stabilize, still set bank switching to low-byte
+    in pins, 16                side 0     ; Push address LSB and data to ISR in one shot, and return to high-byte
+                                          ; SM auto-push will automatically send ISR to FIFO
+    wait 0 gpio PIN_ISA_BRDY              ; Profit?
 

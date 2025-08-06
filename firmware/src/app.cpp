@@ -32,7 +32,6 @@ __attribute__((noreturn)) void Application::LogicTask()
     auto self = Application::GetInstance();
 
     while (true) {
-        self->logic->Prepare();
         if (self->hwMode == UserMode::Serial) {
             self->logic->AddressReader(&self->dataQueue, false);
         } else {
@@ -362,7 +361,6 @@ void Application::UserOutput()
             }
         }
         this->lastActivityTimer = time_us_64();
-        printf("newdata %d\n", count);
         this->ui->NewData(dataList, count, this->app_currentSelect != ProgramSelect::BusDump);
         delete[] dataList;
     } break;
@@ -441,20 +439,14 @@ Application::Application()
 {
     // When starting from ISA bus, power might be unstable and I2C may be
     // unresponsive. Delay everything by some arbitrary amount of time
-    sleep_ms(150);
+    sleep_ms(75);
 
-#if defined(PICOPOST_OVERCLOCK)
-    // OC RP2040 to 200 MHz for better performance
-    printf("Waiting for board to stabilize... ");
-    busy_wait_ms(250);
-    printf("Overclocking... ");
-    vreg_set_voltage(VREG_VOLTAGE_1_30);
-    busy_wait_ms(250);
-    set_sys_clock_khz(200000, true);
-#endif
+    vreg_set_voltage(VREG_VOLTAGE_1_25);
+    busy_wait_ms(5);
+    set_sys_clock_khz(REQ_CLOCK_KHZ, true);
 
     // Initialize data queue for async, multi-threaded data output
-    queue_init(&this->dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
+    queue_init(&this->dataQueue, sizeof(QueueData), QUEUE_DEPTH);
 
     // Onboard LED shows if we're ready for operation
     // Start off, turn back on when we're ready to enter main loop

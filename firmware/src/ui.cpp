@@ -197,7 +197,6 @@ void UserInterface::NewData(const QueueData* buffer, const size_t elements, cons
         } break;
 
         case QueueOperation::P80Data: {
-            break;
             if (currItem->data != m_lastData) {
                 const double tstampDbl = currItem->timestamp / 1000.0;
                 HistoryShift();
