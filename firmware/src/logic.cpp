@@ -21,17 +21,7 @@ void Logic::Stop()
 {
     while (m_appRunning) {
         SetQuitFlag(true);
-
-        if (m_pioMap.readerSm != -1) {
-            irq_set_enabled(m_pioMap.pioIrq, false);
-            pio_sm_set_enabled(m_pioMap.hwBase, m_pioMap.readerSm, false);
-            pio_sm_clear_fifos(m_pioMap.hwBase, m_pioMap.readerSm);
-            pio_sm_restart(m_pioMap.hwBase, m_pioMap.readerSm);
-            pio_sm_unclaim(m_pioMap.hwBase, m_pioMap.readerSm);
-            pio_remove_program(m_pioMap.hwBase, &Bus_FastRead_program, m_pioMap.readerOffset);
-            m_pioMap.readerSm = -1;
-            m_pioMap.readerOffset = 0;
-        }
+        sleep_ms(15);
     }
 }
 
@@ -105,14 +95,22 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
         }
     }
 
-    irq_set_enabled(IO_IRQ_BANK0, false);
+    pio_sm_set_enabled(m_pioMap.hwBase, m_pioMap.readerSm, false);
+    irq_set_enabled(m_pioMap.pioIrq, false);
+    pio_set_irq0_source_enabled(m_pioMap.hwBase, pis_sm0_rx_fifo_not_empty, false);
+    irq_set_enabled(m_pioMap.rstIrq, false);
     gpio_set_irq_enabled_with_callback(m_resetPin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false, nullptr);
-    pio_set_irq0_source_enabled(m_pioMap.hwBase, pis_sm0_rx_fifo_not_empty, true);
+    pio_sm_clear_fifos(m_pioMap.hwBase, m_pioMap.readerSm);
+    pio_sm_restart(m_pioMap.hwBase, m_pioMap.readerSm);
+    pio_sm_unclaim(m_pioMap.hwBase, m_pioMap.readerSm);
     if (baseAddress == AllAddresses)
         irq_remove_handler(m_pioMap.pioIrq, &Logic::BusReaderNoFilterISR);
     else
         irq_remove_handler(m_pioMap.pioIrq, &Logic::BusReaderISR);
     gpio_deinit(m_resetPin);
+    pio_remove_program(m_pioMap.hwBase, &Bus_FastRead_program, m_pioMap.readerOffset);
+    m_pioMap.readerSm = -1;
+    m_pioMap.readerOffset = 0;
 
     sleep_ms(100);
     m_appRunning = false;
