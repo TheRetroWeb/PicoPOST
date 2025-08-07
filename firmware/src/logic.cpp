@@ -23,6 +23,7 @@ void Logic::Stop()
         SetQuitFlag(true);
         sleep_ms(15);
     }
+    SetQuitFlag(false);
 }
 
 void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress)
@@ -214,12 +215,12 @@ void Logic::ResetPulseISR(uint gpio, uint32_t event_mask)
     }
 }
 
-bool Logic::GetQuitFlag()
+__force_inline bool Logic::GetQuitFlag() const
 {
     return m_quitLoop;
 }
 
-void Logic::SetQuitFlag(bool _flag)
+__force_inline void Logic::SetQuitFlag(bool _flag)
 {
     m_quitLoop = _flag;
 }

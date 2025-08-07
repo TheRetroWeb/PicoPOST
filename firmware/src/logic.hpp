@@ -180,8 +180,8 @@ private:
     static void BusReaderNoFilterISR(void);
     static void ResetPulseISR(uint gpio, uint32_t event_mask);
 
-    __force_inline bool GetQuitFlag();
-    void SetQuitFlag(bool _flag);
+    __force_inline bool GetQuitFlag() const;
+    __force_inline void SetQuitFlag(bool _flag);
 };
 
 #endif // PICOPOST_LOGIC_HPP
