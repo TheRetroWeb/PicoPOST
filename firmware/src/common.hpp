@@ -52,7 +52,6 @@ struct __attribute__((packed)) QueueData {
     uint16_t address { 0 };
     uint8_t data { 0 };
     QueueOperation operation { QueueOperation::None };
-    bool printToOled { true };
 };
 
 using Bitmap = uint8_t[c_maxBmpPayload];

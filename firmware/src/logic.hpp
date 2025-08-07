@@ -7,8 +7,10 @@
 #ifndef PICOPOST_LOGIC_HPP
 #define PICOPOST_LOGIC_HPP
 
+#include "common.hpp"
 #include "voltmon.hpp"
 
+#include "cfg/pins.h"
 #include "hardware/pio.h"
 #include "pico/util/queue.h"
 
@@ -70,17 +72,41 @@ private:
         PIO hwBase;
         uint readerOffset { 0 };
         int readerSm { -1 };
-        uint irq { 0 };
+        uint pioIrq { 0 };
+        uint rstIrq { 0 };
         uint16_t filterAddress {};
     };
 
-    union AddressDecoding {
-        uint32_t raw { 0 };
-        struct {
+    struct AddressDecoding {
+        using SourceType = uint32_t;
+        struct __attribute__((packed)) TargetType {
             uint8_t dataCopy;
             uint8_t addrLo;
             uint8_t data;
             uint8_t addrHi;
+
+            inline uint16_t Address() const
+            {
+                return static_cast<uint16_t>(addrHi << 8 | addrLo);
+            }
+        };
+
+        static inline TargetType ParseBusRead(SourceType raw)
+        {
+            return std::bit_cast<TargetType>(raw);
+        }
+    };
+
+    struct TimelineEntry {
+        enum class Type : uint8_t {
+            Data,
+            Reset,
+        };
+
+        Type type { Type::Data };
+        union {
+            AddressDecoding::TargetType busData {};
+            QueueOperation resetEvent;
         };
     };
 
@@ -143,13 +169,16 @@ private:
     static Logic* s_instance;
 
     uint64_t m_lastReset { 0 };
+    uint m_resetPin { PIN_ISA_RST_R6 };
     volatile bool m_appRunning { false };
     std::atomic<bool> m_quitLoop { false };
     PortReaderPIO m_pioMap {};
     std::unique_ptr<VoltMon> m_volts {};
-    RingBuffer<AddressDecoding, QUEUE_DEPTH> m_ringBuffer {};
+    RingBuffer<TimelineEntry, QUEUE_DEPTH> m_ringBuffer {};
 
-    static void AddressReaderISR(void);
+    static void BusReaderISR(void);
+    static void BusReaderNoFilterISR(void);
+    static void ResetPulseISR(uint gpio, uint32_t event_mask);
 
     __force_inline bool GetQuitFlag();
     void SetQuitFlag(bool _flag);

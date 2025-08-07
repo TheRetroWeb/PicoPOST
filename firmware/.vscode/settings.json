@@ -45,7 +45,10 @@
         "span": "c",
         "pio.h": "c",
         "clocks.h": "c",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "sync.h": "c",
+        "gpio.h": "c",
+        "optional": "cpp"
     },
     "cortex-debug.variableUseNaturalFormat": false
 }

@@ -23,7 +23,7 @@ void Logic::Stop()
         SetQuitFlag(true);
 
         if (m_pioMap.readerSm != -1) {
-            irq_set_enabled(m_pioMap.irq, false);
+            irq_set_enabled(m_pioMap.pioIrq, false);
             pio_sm_set_enabled(m_pioMap.hwBase, m_pioMap.readerSm, false);
             pio_sm_clear_fifos(m_pioMap.hwBase, m_pioMap.readerSm);
             pio_sm_restart(m_pioMap.hwBase, m_pioMap.readerSm);
@@ -43,17 +43,13 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
 
     m_appRunning = true;
 
-    const int c_rstPin = newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5;
-    gpio_init(c_rstPin);
-    gpio_set_dir(c_rstPin, GPIO_IN);
-    gpio_pull_down(c_rstPin);
-
     // Configure PIO
     m_pioMap.hwBase = pio0;
     m_pioMap.readerOffset = pio_add_program(m_pioMap.hwBase, &Bus_FastRead_program);
     m_pioMap.readerSm = 0;
     pio_sm_claim(m_pioMap.hwBase, m_pioMap.readerSm);
-    m_pioMap.irq = PIO0_IRQ_0;
+    m_pioMap.pioIrq = PIO0_IRQ_0;
+    m_pioMap.rstIrq = IO_IRQ_BANK0;
     m_pioMap.filterAddress = baseAddress;
 
     pio_gpio_init(m_pioMap.hwBase, PIN_ADDRESS_BANK);
@@ -69,70 +65,54 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
     pio_sm_init(m_pioMap.hwBase, m_pioMap.readerSm, m_pioMap.readerOffset, &pioCfg);
     pio_sm_clear_fifos(m_pioMap.hwBase, m_pioMap.readerSm);
 
-    irq_set_enabled(m_pioMap.irq, false);
-    irq_set_priority(m_pioMap.irq, PICO_HIGHEST_IRQ_PRIORITY);
+    irq_set_enabled(m_pioMap.pioIrq, false);
+    irq_set_priority(m_pioMap.pioIrq, PICO_HIGHEST_IRQ_PRIORITY + 5);
     pio_set_irq0_source_enabled(m_pioMap.hwBase, pis_sm0_rx_fifo_not_empty, true);
-    irq_set_exclusive_handler(m_pioMap.irq, &Logic::AddressReaderISR);
+    if (baseAddress == AllAddresses)
+        irq_set_exclusive_handler(m_pioMap.pioIrq, &Logic::BusReaderNoFilterISR);
+    else
+        irq_set_exclusive_handler(m_pioMap.pioIrq, &Logic::BusReaderISR);
 
     m_lastReset = time_us_64();
 
-    // const uint32_t c_rstMask = (1UL << c_rstPin);
+    m_resetPin = newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5;
+    gpio_init(m_resetPin);
+    gpio_set_dir(m_resetPin, GPIO_IN);
+    gpio_pull_down(m_resetPin);
 
-    // bool resetActive = gpio_get(c_rstPin);
-    // bool resetLastActive = resetActive;
-    // uint64_t resetTimer = timer_hw->timerawl;
-    // bool resetDebounce = false;
-
-    QueueData qd;
-    qd.printToOled = (baseAddress != AllAddresses);
-
-    // Start PIO
+    irq_set_enabled(m_pioMap.rstIrq, false);
+    irq_set_priority(m_pioMap.rstIrq, PICO_HIGHEST_IRQ_PRIORITY + 5);
+    gpio_set_irq_enabled_with_callback(m_resetPin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &Logic::ResetPulseISR);
     pio_sm_set_enabled(m_pioMap.hwBase, m_pioMap.readerSm, true);
-    irq_set_enabled(m_pioMap.irq, true);
+    irq_set_enabled(m_pioMap.pioIrq, true);
+    QueueData qd;
     while (!GetQuitFlag()) {
-        // resetActive = sio_hw->gpio_in & c_rstMask;
-        // if (!resetDebounce) {
-        //     // Enable the pulse debouncer if the reset pin changes state while standing asserted or deasserted
-        //     if (resetActive != resetLastActive) {
-        //         resetDebounce = true;
-        //         resetTimer = timer_hw->timerawl + 50000;
-        //         resetLastActive = resetActive;
-        //         continue;
-        //     }
-        // } else {
-        //     // Save reset event once properly debounced
-        //     if (timer_hw->timerawl > resetTimer && resetActive == resetLastActive) {
-        //         resetDebounce = false;
-        //         m_lastReset = time_us_64();
-        //         qd.operation = resetActive ? QueueOperation::P80ResetActive : QueueOperation::P80ResetCleared;
-        //         qd.timestamp = m_lastReset;
-        //         queue_add_blocking(list, &qd);
-        //     } else {
-        //         // If reset is active or debouncing, wait for it to go low before reading bus activity
-        //         continue;
-        //     }
-        // }
-        // resetLastActive = resetActive;
-
-        // The readout from the FIFO should look a bit like this
-        // |  A[15:8]  |  Don't care  |  A[7:0]  |  D[7:0]
-        while (auto newData = m_ringBuffer.pop()) {
+        if (auto newData = m_ringBuffer.pop()) {
             const auto& entry = newData.value();
-            qd.address = (entry.addrHi << 8 | entry.addrLo);
-            qd.operation = QueueOperation::P80Data;
-            qd.timestamp = time_us_64() - m_lastReset;
-            qd.data = entry.data;
+            if (entry.type == TimelineEntry::Type::Data) {
+                qd.address = entry.busData.Address();
+                qd.operation = QueueOperation::P80Data;
+                qd.timestamp = time_us_64() - m_lastReset;
+                qd.data = entry.busData.data;
+            } else if (entry.type == TimelineEntry::Type::Reset) {
+                m_lastReset = time_us_64();
+                qd.address = 0;
+                qd.data = 0;
+                qd.operation = entry.resetEvent;
+                qd.timestamp = m_lastReset;
+            }
             queue_add_blocking(list, &qd);
         }
-
-        // if (pio_sm_is_rx_fifo_full(m_pioMap.hwBase, m_pioMap.readerSm)) {
-        //     panic("fifo full :(");
-        // }
     }
 
+    irq_set_enabled(IO_IRQ_BANK0, false);
+    gpio_set_irq_enabled_with_callback(m_resetPin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, false, nullptr);
     pio_set_irq0_source_enabled(m_pioMap.hwBase, pis_sm0_rx_fifo_not_empty, true);
-    irq_remove_handler(m_pioMap.irq, &Logic::AddressReaderISR);
-    gpio_deinit(c_rstPin);
+    if (baseAddress == AllAddresses)
+        irq_remove_handler(m_pioMap.pioIrq, &Logic::BusReaderNoFilterISR);
+    else
+        irq_remove_handler(m_pioMap.pioIrq, &Logic::BusReaderISR);
+    gpio_deinit(m_resetPin);
 
     sleep_ms(100);
     m_appRunning = false;
@@ -186,17 +166,54 @@ void Logic::VoltageMonitor(queue_t* list)
 
 Logic* Logic::s_instance { nullptr };
 
-void Logic::AddressReaderISR(void)
+void Logic::BusReaderISR(void)
 {
-    AddressDecoding temp {};
     const auto& pioMap = s_instance->m_pioMap;
+    AddressDecoding::TargetType temp {};
     while (!(pioMap.hwBase->fstat & (1u << (PIO_FSTAT_RXEMPTY_LSB + pioMap.readerSm)))) {
-        temp.raw = pioMap.hwBase->rxf[pioMap.readerSm];
-        if (pioMap.filterAddress == AllAddresses || pioMap.filterAddress == (temp.addrHi << 8 | temp.addrLo))
-            s_instance->m_ringBuffer.push(temp);
+        temp = AddressDecoding::ParseBusRead(pioMap.hwBase->rxf[pioMap.readerSm]);
+        if (pioMap.filterAddress == temp.Address()) {
+            gpio_xor_mask(1 << PICO_DEFAULT_LED_PIN);
+            s_instance->m_ringBuffer.push({
+                .type = TimelineEntry::Type::Data,
+                .busData = temp,
+            });
+        }
     }
-    gpio_xor_mask(1 << PICO_DEFAULT_LED_PIN);
-    irq_clear(pioMap.irq);
+    irq_clear(pioMap.pioIrq);
+}
+
+void Logic::BusReaderNoFilterISR(void)
+{
+    const auto& pioMap = s_instance->m_pioMap;
+    AddressDecoding::TargetType temp {};
+    while (!(pioMap.hwBase->fstat & (1u << (PIO_FSTAT_RXEMPTY_LSB + pioMap.readerSm)))) {
+        temp = AddressDecoding::ParseBusRead(pioMap.hwBase->rxf[pioMap.readerSm]);
+        s_instance->m_ringBuffer.push({
+            .type = TimelineEntry::Type::Data,
+            .busData = temp,
+        });
+        gpio_xor_mask(1 << PICO_DEFAULT_LED_PIN);
+    }
+    irq_clear(pioMap.pioIrq);
+}
+
+void Logic::ResetPulseISR(uint gpio, uint32_t event_mask)
+{
+    if (gpio != s_instance->m_resetPin)
+        return;
+
+    if (event_mask & GPIO_IRQ_EDGE_RISE) {
+        s_instance->m_ringBuffer.push({
+            .type = TimelineEntry::Type::Reset,
+            .resetEvent = QueueOperation::P80ResetActive,
+        });
+    } else if (event_mask & GPIO_IRQ_EDGE_FALL) {
+        s_instance->m_ringBuffer.push({
+            .type = TimelineEntry::Type::Reset,
+            .resetEvent = QueueOperation::P80ResetCleared,
+        });
+    }
 }
 
 bool Logic::GetQuitFlag()
