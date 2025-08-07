@@ -3,9 +3,6 @@
 > [!NOTE]
 > You can get a quick summary from the blog post! [Introducing the PicoPOST - The Retro Web Blog](https://blog.theretroweb.com/2023/01/03/introducing-the-picopost/)
 
-> [!NOTE]
-> More in-depth information can be found on our Wiki! [PicoPOST - The Retro Web Wiki](https://wiki.theretroweb.com/index.php?title=PicoPOST)
-
 ## Introduction
 
 ![PicoPOST Logo](/readme_files/logo.png)
