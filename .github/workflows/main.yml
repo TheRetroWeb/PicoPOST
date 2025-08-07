@@ -1,0 +1,84 @@
+# Shamelessly inspired by https://github.com/polpo/picogus/blob/557e58f5b3587d28c9a1a5c3a83378d67848212e/.github/workflows/build.yml
+
+name: Build
+on: [push, pull_request]
+jobs:
+    build-firmware:
+      runs-on: ubuntu-22.04
+      env: 
+        BUILD_TYPE: "Release"
+        PICOSDK_VER: "2.2.0"
+        # The Pico-SDK will listen to these environment vars
+        PICOTOOL_FETCH_FROM_GIT_PATH: ${{github.workspace}}/pico/picotool
+        PICO_SDK_PATH: ${{github.workspace}}/pico/pico-sdk
+        OUTPUT_DIR: ${{github.workspace}}/binaries
+      steps:
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+            submodules: recursive
+
+      - name: Install Arm GNU Toolchain (arm-none-eabi-gcc)
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '14.2.Rel1'
+
+      # Since we reference stable versions of Pico-SDK and pico-extras, we can cache their downloads.
+      # If this were to reference changing branches (like "master"), this caching step must be removed!!!
+      - name: Cache Pico-SDK and Extras 
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/pico/
+          key: ${{ env.PICOSDK_VER }}        
+
+      # If we did not find stuff in the cache, download it fresh.
+      # Use method recommended by Pico SDK docs: not a full recursive clone
+      - name: Clone Pico-SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          git clone -b "$PICOSDK_VER" --depth 1 https://github.com/raspberrypi/pico-sdk.git $PICO_SDK_PATH
+          cd $PICO_SDK_PATH
+          git submodule update --init --depth 1
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Build Firmware
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: |
+          mkdir -p $OUTPUT_DIR
+          cmake $GITHUB_WORKSPACE/sw -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+          cmake --build . --config $BUILD_TYPE --parallel $(nproc)
+          cp *.uf2 $OUTPUT_DIR
+          
+      - name: Upload All Firmwares
+        uses: actions/upload-artifact@v4
+        with:
+          name: PicoPOST Firmware
+          path: ${{env.OUTPUT_DIR}}
+
+    create-release:
+      if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+      runs-on: ubuntu-22.04
+      needs: [build-firmware]
+      env: 
+        STAGING_DIR: ${{github.workspace}}/release-staging-dir
+      steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Get Tags
+        id: tag
+        uses: ildug/get-tag-action@v1
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PicoPOST Firmware
+          path: ${{env.STAGING_DIR}}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release-body.md
+          files: PicoPOST-v${{ steps.tag.outputs.version }}.uf2
+          draft: true
