@@ -14,8 +14,10 @@
 #include "hardware/vreg.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
+
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 std::unique_ptr<Application> Application::instance { nullptr };
 
@@ -354,15 +356,13 @@ void Application::UserOutput()
             break;
         }
 
-        QueueData* dataList = new QueueData[count];
+        std::vector<QueueData> dataList {};
+        dataList.reserve(count);
         for (uint idx = 0; idx < count; idx++) {
-            while (!queue_try_remove(&this->dataQueue, &dataList[idx])) {
-                sleep_us(500);
-            }
+            queue_remove_blocking(&this->dataQueue, &dataList[idx]);
         }
         this->lastActivityTimer = time_us_64();
-        this->ui->NewData(dataList, count, this->app_currentSelect != ProgramSelect::BusDump);
-        delete[] dataList;
+        this->ui->NewData(dataList.data(), count, this->app_currentSelect != ProgramSelect::BusDump);
     } break;
     }
 }
