@@ -441,10 +441,6 @@ Application::Application()
     // unresponsive. Delay everything by some arbitrary amount of time
     sleep_ms(75);
 
-    vreg_set_voltage(VREG_VOLTAGE_1_25);
-    busy_wait_ms(5);
-    set_sys_clock_khz(REQ_CLOCK_KHZ, true);
-
     // Initialize data queue for async, multi-threaded data output
     queue_init(&this->dataQueue, sizeof(QueueData), QUEUE_DEPTH);
 

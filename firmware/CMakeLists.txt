@@ -23,7 +23,8 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/cfg)
+set(PICO_BOARD picopost-rp2040)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(PICO_DEOPTIMIZED_DEBUG 1)
@@ -102,11 +103,20 @@ pico_enable_stdio_uart(pico_post_fw 0)
 set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
 
 target_compile_definitions(pico_post_fw PRIVATE
-    REQ_CLOCK_KHZ=300000
+    # Overclocking settings - 330 MHz nominal
+    # See pico-sdk/src/rp2_common/hardware_clocks/scripts/vcocalc.py for info about these magic numbers
+    REQ_CLOCK_KHZ=330000
+    SYS_CLK_HZ=330000000
+    PLL_SYS_REFDIV=1
+    PLL_SYS_VCO_FREQ_HZ=1320000000
+    PLL_SYS_POSTDIV1=4
+    PLL_SYS_POSTDIV2=1
+    # Set voltage before main so no need to do so on the fly
+    SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST=1
+    SYS_CLK_VREG_VOLTAGE_MIN=VREG_VOLTAGE_1_25
+
     QUEUE_DEPTH=8192
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
-    PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
-    PICO_FLASH_SPI_CLKDIV=4
     ${PROJ_DEFS}
 )
 
