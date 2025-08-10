@@ -1,18 +1,39 @@
+# Generated Cmake Pico project file
+
 cmake_minimum_required(VERSION 3.13)
 
-# initialize the SDK based on PICO_SDK_PATH
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-## UNCOMMENT THIS LINE TO SWITCH TO GIT-FETCHED SDK
-# set(PICO_SDK_FETCH_FROM_GIT on)
+# Initialise pico_sdk from installed location
+# (note this can come from environment, CMake cache etc)
 
-# you should be setting this from env variables, really
-# set(PICO_SDK_PATH "~/repo/pico-sdk")
-set(PICO_BOARD pico)
+# == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
+if(WIN32)
+    set(USERHOME $ENV{USERPROFILE})
+else()
+    set(USERHOME $ENV{HOME})
+endif()
+set(sdkVersion 2.2.0)
+set(toolchainVersion 14_2_Rel1)
+set(picotoolVersion 2.2.0)
+set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
+if (EXISTS ${picoVscode})
+    include(${picoVscode})
+endif()
+# ====================================================================================
+set(PICO_BOARD pico CACHE STRING "Board type")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PICO_DEOPTIMIZED_DEBUG 1)
+endif()
 
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.4.3
+    VERSION 0.5.0
+    LANGUAGES C CXX ASM
 )
 
 # initialize the Raspberry Pi Pico SDK
@@ -25,15 +46,12 @@ set(CALIBADJ_12V 1.000)
 list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
 option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
-option(PICOPOST_RESET_HDLR "[EXPERIMENTAL] Enable reset pulse detection using PIO engines" ON)
 option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
 endif()
-if(PICOPOST_RESET_HDLR)
-    list(APPEND PROJ_DEFS PICOPOST_RESET_HDLR)
-endif()
+
 if(PICOPOST_SUPPORT_REV5)
     list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
 endif()
@@ -81,8 +99,14 @@ target_link_libraries(pico_post_fw PUBLIC
 pico_enable_stdio_usb(pico_post_fw 1)
 pico_enable_stdio_uart(pico_post_fw 0)
 
+set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
+
 target_compile_definitions(pico_post_fw PRIVATE
+    REQ_CLOCK_KHZ=300000
+    QUEUE_DEPTH=8192
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
+    PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64
+    PICO_FLASH_SPI_CLKDIV=4
     ${PROJ_DEFS}
 )
 
@@ -93,4 +117,5 @@ target_include_directories(pico_post_fw PUBLIC
 )
 
 # create map/bin/hex/uf2 file in addition to ELF.
+set_target_properties(pico_post_fw PROPERTIES OUTPUT_NAME "${PICOPOST_UF2_FILENAME}")
 pico_add_extra_outputs(pico_post_fw)

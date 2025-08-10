@@ -10,15 +10,13 @@
 
 // System libs
 #include "pico/multicore.h"
-#include "pico/stdlib.h"
-#include <string.h>
+#include "hardware/irq.h"
 
 int main()
 {
     sleep_ms(10);
 
     Application::GetInstance();
-
     multicore_launch_core1(Application::LogicTask);
     Application::UITask();
 

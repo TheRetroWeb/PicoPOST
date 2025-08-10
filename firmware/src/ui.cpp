@@ -1,13 +1,20 @@
 #include "ui.hpp"
+
 #include "bitmaps.hpp"
-#include "hardware/gpio.h"
-#include "pico/rand.h"
 #include "pins.h"
 #include "proj.h"
+
 #include "shapeRenderer/ShapeRenderer.h"
 #include "textRenderer/TextRenderer.h"
+
+#include "hardware/gpio.h"
+#include "pico/rand.h"
+
+#include <iomanip>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 using namespace pico_oled;
 
@@ -17,6 +24,7 @@ const std::vector<MenuEntry> UserInterface::s_mainMenu = {
     { ProgramSelect::Port90Reader, "Port 90h PS/2" },
     { ProgramSelect::Port300Reader, "Port 300h EISA" },
     { ProgramSelect::Port378Reader, "Port 378h Oli" },
+    { ProgramSelect::BusDump, "Bus dump" },
     { ProgramSelect::VoltageMonitor, "Voltage rails" },
     { ProgramSelect::Info, "Info" },
     { ProgramSelect::UpdateFW, "Update FW" }
@@ -81,8 +89,10 @@ void UserInterface::DrawFullScreen(const Icon& bmp)
 
 void UserInterface::DrawScreenSaver(const Sprite& spr, uint8_t frameId)
 {
-    if (display == nullptr) return;
-    if (frameId > spr.frameCount) return;
+    if (display == nullptr)
+        return;
+    if (frameId > spr.frameCount)
+        return;
 
     UpdateSpritePosition(spr);
 
@@ -160,16 +170,68 @@ void UserInterface::DrawMenu(uint index)
     display->sendBuffer();
 }
 
-void UserInterface::NewData(const QueueData* buffer)
+void UserInterface::NewData(const QueueData* buffer, const size_t elements, const bool writeToOled)
 {
-    if (buffer == nullptr) {
+    if (buffer == nullptr || elements == 0) {
         return;
     }
 
-    const double tstamp = buffer->timestamp / 1000.0;
-
     // OLED data handler
-    if (display != nullptr) {
+    enum class OLEDRefreshOperation {
+        None,
+        Volts,
+        Bus,
+    };
+
+    OLEDRefreshOperation oledRefresh { OLEDRefreshOperation::None };
+    std::stringstream serialBuff {};
+    for (uint idx = 0; idx < elements; idx++) {
+        const auto currItem = &buffer[idx];
+        switch (currItem->operation) {
+
+        case QueueOperation::Volts: {
+            sprintf(textBuffer[0], "%01.2f", currItem->volts5);
+            sprintf(textBuffer[1], "%02.2f", currItem->volts12);
+            serialBuff << "5V @ " << textBuffer[0] << " | 12V @ " << textBuffer[1] << "\n";
+            oledRefresh = OLEDRefreshOperation::Volts;
+        } break;
+
+        case QueueOperation::P80Data: {
+            if (currItem->data != m_lastData) {
+                const double tstampDbl = currItem->timestamp / 1000.0;
+                HistoryShift();
+                sprintf(textBuffer[0], "%02X", currItem->data);
+                serialBuff << std::setw(10) << std::fixed << std::setprecision(3) << tstampDbl << " | ";
+                serialBuff << textBuffer[0] << " @ ";
+                serialBuff << std::setw(4) << std::setfill('0') << std::hex << currItem->address << std::setfill(' ') << "h\n";
+                m_lastData = currItem->data;
+                oledRefresh = OLEDRefreshOperation::Bus;
+            }
+        } break;
+
+        case QueueOperation::P80ResetActive:
+        case QueueOperation::P80ResetCleared: {
+            HistoryShift();
+            if (currItem->operation == QueueOperation::P80ResetActive) {
+                serialBuff << "Reset asserted!\n";
+                sprintf(textBuffer[0], "R!");
+            } else {
+                serialBuff << "Reset cleared\n";
+                sprintf(textBuffer[0], "R_");
+            }
+            m_lastData = 0x0100;
+            oledRefresh = OLEDRefreshOperation::Bus;
+        } break;
+
+        default: {
+            // do nothing
+        } break;
+        }
+    }
+
+    printf("%s", serialBuff.str().c_str());
+
+    if (writeToOled && display != nullptr && oledRefresh != OLEDRefreshOperation::None) {
         const uint8_t bottomOffsetSmall = displayHeight - 1 - 13;
         const uint8_t bottomOffsetLarge = bottomOffsetSmall - 4;
         const uint8_t centerOffsetSmall = bottomOffsetSmall - 16;
@@ -177,50 +239,9 @@ void UserInterface::NewData(const QueueData* buffer)
         const uint8_t topOffsetSmall = centerOffsetSmall - 16;
         const uint8_t topOffsetLarge = topOffsetSmall - 4;
 
-        bool refresh = true;
-        switch (buffer->operation) {
-
-        case QueueOperation::Greetings: {
-            drawText(display, font_12x16, "PicoPOST", 1, 1);
-            drawLine(display, 0, 18, 128, bottomOffsetSmall);
-            drawText(display, font_8x8, PROJ_STR_VER, 127 - (strlen(PROJ_STR_VER) * 8), 22);
-        } break;
-
-        case QueueOperation::Volts: {
-            fillRect(display, 0, 9, 127, displayHeight - 1, WriteMode::SUBTRACT);
-            if (displayHeight == 32) {
-                sprintf(textBuffer[0], "%01.1f", buffer->volts5);
-                sprintf(textBuffer[1], "%02.1f", buffer->volts12);
-
-                drawText(display, font_5x8, "+5V", 2, 9);
-                drawText(display, font_8x8, textBuffer[0], 2, bottomOffsetSmall);
-
-                drawText(display, font_5x8, "+12V", 50, 9);
-                drawText(display, font_8x8, textBuffer[1], 50, bottomOffsetSmall);
-            } else if (displayHeight == 64) {
-                sprintf(textBuffer[0], "%01.2f", buffer->volts5);
-                sprintf(textBuffer[1], "%02.2f", buffer->volts12);
-
-                drawText(display, font_5x8, "+5V", 4, 11);
-                drawText(display, font_8x8, textBuffer[0], 4, 23);
-
-                drawText(display, font_5x8, "+12V", 67, 11);
-                drawText(display, font_8x8, textBuffer[1], 67, 23);
-            }
-        } break;
-
-        case QueueOperation::P80Data:
-        case QueueOperation::P80ResetActive:
-        case QueueOperation::P80ResetCleared: {
-            HistoryShift();
+        switch (oledRefresh) {
+        case OLEDRefreshOperation::Bus: {
             fillRect(display, 0, 12, 127, displayHeight - 1, WriteMode::SUBTRACT);
-            if (buffer->operation == QueueOperation::P80ResetActive) {
-                sprintf(textBuffer[0], "R!");
-            } else if (buffer->operation == QueueOperation::P80ResetCleared) {
-                sprintf(textBuffer[0], "R_");
-            } else {
-                sprintf(textBuffer[0], "%02X", buffer->data);
-            }
             const uint8_t itemSpace = 24;
             const uint8_t vertOffset = (displayHeight == 64) ? topOffsetSmall : bottomOffsetSmall;
             uint8_t horzOffset = 99;
@@ -229,81 +250,33 @@ void UserInterface::NewData(const QueueData* buffer)
                     textBuffer[idx], horzOffset, (idx == 0) ? vertOffset - 4 : vertOffset);
                 horzOffset -= itemSpace;
             }
-#if defined(PICOPOST_PRINT_CODE_DESCR)
+        } break;
+
+        case OLEDRefreshOperation::Volts: {
+            fillRect(display, 0, 9, 127, displayHeight - 1, WriteMode::SUBTRACT);
             if (displayHeight == 32) {
-                drawText(display, font_8x8, textBuffer[4], 0, bottomOffsetSmall);
-                drawText(display, font_8x8, textBuffer[3], 23, bottomOffsetSmall);
-                drawText(display, font_8x8, textBuffer[2], 47, bottomOffsetSmall);
-                drawText(display, font_8x8, textBuffer[1], 71, bottomOffsetSmall);
-                drawText(display, font_12x16, textBuffer[0], 96, bottomOffsetLarge);
+                drawText(display, font_5x8, "+5V", 2, 9);
+                drawText(display, font_8x8, textBuffer[0], 2, bottomOffsetSmall);
+
+                drawText(display, font_5x8, "+12V", 60, 9);
+                drawText(display, font_8x8, textBuffer[1], 60, bottomOffsetSmall);
             } else if (displayHeight == 64) {
-                drawText(display, font_8x8, textBuffer[4], 0, topOffsetSmall);
-                drawText(display, font_8x8, textBuffer[3], 23, topOffsetSmall);
-                drawText(display, font_8x8, textBuffer[2], 47, topOffsetSmall);
-                drawText(display, font_8x8, textBuffer[1], 71, topOffsetSmall);
-                drawText(display, font_12x16, textBuffer[0], 96, topOffsetLarge);
+                drawText(display, font_5x8, "+5V", 4, 11);
+                drawText(display, font_8x8, textBuffer[0], 4, 23);
 
-                // Placeholder, printing post code description
-                // fetch code meaning!
-                size_t lineOffset = topOffsetLarge + 16;
-                const size_t lineHeight = 7;
-                // 25 char limit per line!!!
-                drawText(display, font_5x8, "Farts are farting within", 2, lineOffset);
-                lineOffset += lineHeight;
-                drawText(display, font_5x8, "the farted farter. Do not", 2, lineOffset);
-                lineOffset += lineHeight;
-                drawText(display, font_5x8, "smell.", 2, lineOffset);
-                lineOffset += lineHeight;
-                drawText(display, font_5x8, "And another one", 2, lineOffset);
+                drawText(display, font_5x8, "+12V", 67, 11);
+                drawText(display, font_8x8, textBuffer[1], 67, 23);
             }
-#endif
-        } break;
-
-        default: {
-            // do nothing
-            refresh = false;
         } break;
         }
 
-        if (refresh) {
-            display->sendBuffer();
-        }
-    }
-
-    // USB ACM serial output
-    switch (buffer->operation) {
-
-    case QueueOperation::Greetings: {
-        printf("-- PicoPOST " PROJ_STR_VER " --\n");
-        printf("%s\n", creditsLine);
-    } break;
-
-    case QueueOperation::Volts: {
-        printf("%10.3f | 5 V @ %.2f | 12 V @ %.2f\n",
-            tstamp, buffer->volts5, buffer->volts12);
-    } break;
-
-    case QueueOperation::P80Data: {
-        printf("%10.3f | %02X @ %04Xh\n",
-            tstamp, buffer->data, buffer->address);
-    } break;
-
-    case QueueOperation::P80ResetActive: {
-        printf("Reset!\n");
-    } break;
-
-    case QueueOperation::P80ResetCleared: {
-        printf("Reset cleared\n");
-    } break;
-
-    default: {
-        // do nothing
-    } break;
+        display->sendBuffer();
     }
 }
 
 void UserInterface::ClearBuffers()
 {
+    m_lastData = 0x0100;
     memset(textBuffer, '\0', sizeof(textBuffer));
 }
 
