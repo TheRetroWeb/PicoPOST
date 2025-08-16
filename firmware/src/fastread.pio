@@ -3,98 +3,15 @@
 ; GPIOs normally allow. PIO FTW!
 ;
 
+; Bus ready pin
+.define public PIN_ISA_BRDY 18
+
 .program Bus_FastRead
-start_read:
-    wait 1 pin 16               ; Wait for bus_ready signal to transition high
-    nop [ 2 ]                   ; Let the bus settle down for a bit
-    set pins, 1                 ; Address bank is set for reading A[15:8]
-    in pins, 16                 ; Push address MSB and data to ISR in one shot
-    set pins, 0                 ; Flip address bank for reading A[7:0]
-    in pins, 16                 ; Push address LSB and data to ISR in one shot
-    push                        ; Push whole read block to FIFO
-    wait 0 pin 16               ; Wait for end of transaction before restarting
-    jmp start_read              ; Profit?
+.side_set 1 opt
+    wait 1 gpio PIN_ISA_BRDY   side 0     ; Wait for bus_ready signal to transition high
+    in pins, 16 [ 4 ]          side 1     ; Push address MSB and data to ISR in one shot, then set bank switching to low-byte
+    nop [ 4 ]                  side 1     ; Wait for mux to stabilize, still set bank switching to low-byte
+    in pins, 16                side 0     ; Push address LSB and data to ISR in one shot, and return to high-byte
+                                          ; SM auto-push will automatically send ISR to FIFO
+    wait 0 gpio PIN_ISA_BRDY              ; Profit?
 
-% c-sdk {
-#include "pins.h"
-#include "hardware/gpio.h"
-#include <atomic>
-
-static inline void Bus_FastRead_init(PIO pio, uint sm, uint offset)
-{
-    pio_gpio_init(pio, PIN_ADDRESS_BANK);
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ADDRESS_BANK, 1, true);
-    pio_sm_set_consecutive_pindirs(pio, sm, PIN_ISA_D0, 17, false);
-    pio_sm_config c = Bus_FastRead_program_get_default_config(offset);
-    sm_config_set_set_pins(&c, PIN_ADDRESS_BANK, 1);
-    sm_config_set_in_pins(&c, PIN_ISA_D0);
-    sm_config_set_clkdiv(&c, 2.0);
-
-    sm_config_set_in_shift(&c, true, true, 16);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // Load & start!
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
-}
-
-static inline uint32_t Bus_FastRead_PinImage(PIO pio, uint sm)
-{
-    io_rw_32 *rxfifo_shift = (io_rw_32*)&pio->rxf[sm];
-    while (pio_sm_is_rx_fifo_empty(pio, sm) && pio_sm_is_claimed(pio, sm))
-        tight_loop_contents();
-    if (!pio_sm_is_claimed(pio, sm)) {
-        return 0U;
-    }
-    return (uint32_t)*rxfifo_shift;
-}
-
-%}
-
-; #############################################################################
-;
-; GPIO IRQs are too slow even for reading the reset pulse. Let's fix that with
-; PIOs.
-;
-
-.program Bus_FastReset
-.wrap_target
-    wait 1 pin 22               ; Wait for reset signal to transition high
-    set X, 1                    ; Notify pin is high
-    mov ISR, X
-    push                        ; Block FIFO read for main program
-    wait 0 pin 22               ; Wait for reset signal to transition low
-    set X, 0
-    mov ISR, X
-    push                        ; Block again
-.wrap
-
-% c-sdk {
-#include "pins.h"
-#include "hardware/gpio.h"
-#include <stdio.h>
-
-static inline void Bus_FastReset_init(PIO pio, uint sm, uint offset, bool newPcb)
-{
-    pio_sm_set_consecutive_pindirs(pio, sm, newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5, 1, false);
-    pio_sm_config c = Bus_FastReset_program_get_default_config(offset);
-
-    sm_config_set_in_shift(&c, false, true, 1);
-    // sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // Load & start!
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, true);
-}
-
-static inline int Bus_FastReset_IsHigh(PIO pio, uint sm)
-{
-    if (pio_sm_is_rx_fifo_empty(pio, sm)) {
-        return 0;
-    }
-
-    io_ro_8 *rxfifo_shift = (io_ro_8*)&pio->rxf[sm] + 3;
-    return (*rxfifo_shift & 0x01) == 1;
-}
-
-%}

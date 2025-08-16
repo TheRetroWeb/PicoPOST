@@ -9,11 +9,15 @@
 #include "logic.hpp"
 
 // System libs
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/vreg.h"
 #include "pico/bootrom.h"
 #include "pico/stdlib.h"
+
 #include <cstdio>
 #include <cstring>
+#include <vector>
 
 std::unique_ptr<Application> Application::instance { nullptr };
 
@@ -30,18 +34,14 @@ __attribute__((noreturn)) void Application::LogicTask()
     auto self = Application::GetInstance();
 
     while (true) {
-        self->logic->Prepare();
         if (self->hwMode == UserMode::Serial) {
             self->logic->AddressReader(&self->dataQueue, false);
         } else {
             switch (self->app_currentSelect) {
 
-                /* TODO implement full stank reader
-                case ProgramSelect::PS_FullReader: {
-                    self->ui->DrawFooter("Check serial output");
-                    self->logic->FullReader(&self->dataQueue, self->UseNewRemote());
-                } break;
-                */
+            case ProgramSelect::BusDump: {
+                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), Logic::AllAddresses);
+            } break;
 
             case ProgramSelect::Port80Reader: {
                 self->logic->AddressReader(&self->dataQueue, self->UseNewRemote());
@@ -123,7 +123,9 @@ __attribute__((noreturn)) void Application::UITask()
         // Output data for user
         self->UserOutput();
 
-        self->StandbyTick();
+        if (self->hwMode != UserMode::Serial) {
+            self->StandbyTick();
+        }
     }
 }
 
@@ -292,6 +294,9 @@ void Application::UserOutput()
             this->ui->DrawFullScreen(bmp_picoPost);
             this->ui->DrawActions(bmp_back, bmp_empty, bmp_arrowDown);
             this->textScroll.stage = TextScrollStep::BitmapOK;
+
+            printf("PicoPOST " PROJ_STR_VER "\n");
+            printf("%s\n", creditsLine);
         } break;
 
         case TextScrollStep::DrawHeader: {
@@ -340,17 +345,24 @@ void Application::UserOutput()
         if (drawHeader) {
             this->ui->DrawHeader(this->ui->GetMenuEntry(this->app_currentMenuIdx).second);
             this->ui->DrawActions(bmp_back, bmp_empty, bmp_empty);
+
+            if (this->app_currentSelect == ProgramSelect::BusDump) {
+                this->ui->DrawFooter("Connect to PC");
+            }
         }
 
-        uint count = queue_get_level(&this->dataQueue);
-        if (count > 0) {
-            QueueData buffer;
-            queue_remove_blocking(&this->dataQueue, &buffer);
-            this->lastActivityTimer = time_us_64();
-            this->ui->NewData(&buffer);
-        } else {
-            sleep_ms(5);
+        const uint count = queue_get_level(&this->dataQueue);
+        if (count == 0) {
+            break;
         }
+
+        std::vector<QueueData> dataList {};
+        dataList.reserve(count);
+        for (uint idx = 0; idx < count; idx++) {
+            queue_remove_blocking(&this->dataQueue, &dataList[idx]);
+        }
+        this->lastActivityTimer = time_us_64();
+        this->ui->NewData(dataList.data(), count, this->app_currentSelect != ProgramSelect::BusDump);
     } break;
     }
 }
@@ -427,10 +439,10 @@ Application::Application()
 {
     // When starting from ISA bus, power might be unstable and I2C may be
     // unresponsive. Delay everything by some arbitrary amount of time
-    sleep_ms(150);
+    sleep_ms(75);
 
     // Initialize data queue for async, multi-threaded data output
-    queue_init(&this->dataQueue, sizeof(QueueData), MAX_QUEUE_LENGTH);
+    queue_init(&this->dataQueue, sizeof(QueueData), QUEUE_DEPTH);
 
     // Onboard LED shows if we're ready for operation
     // Start off, turn back on when we're ready to enter main loop
