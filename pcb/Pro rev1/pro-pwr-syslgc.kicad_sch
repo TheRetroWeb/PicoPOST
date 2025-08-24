@@ -11762,7 +11762,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Inductor_SMD:L_1812_4532Metric"
+		(property "Footprint" "Inductor_SMD:L_APV_ANR4030"
 			(at 254 133.35 0)
 			(effects
 				(font
@@ -12289,7 +12289,7 @@
 				)
 			)
 		)
-		(property "Value" "PMEG60T20ELR"
+		(property "Value" "3A SMAF"
 			(at 212.4075 135.4652 0)
 			(effects
 				(font
@@ -12297,7 +12297,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Diode_SMD:Nexperia_CFP3_SOD-123W"
+		(property "Footprint" "Diode_SMD:D_SMA"
 			(at 212.09 133.985 0)
 			(effects
 				(font
@@ -12940,7 +12940,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "project libraries:SW_SPST_TS-1088-xR020"
+		(property "Footprint" "Button_Switch_SMD:SW_SPST_TS-1088-xR020"
 			(at 207.01 40.64 0)
 			(effects
 				(font
@@ -16461,7 +16461,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "project libraries:SW_SPST_TS-1088-xR020"
+		(property "Footprint" "Button_Switch_SMD:SW_SPST_TS-1088-xR020"
 			(at 123.19 40.64 0)
 			(effects
 				(font

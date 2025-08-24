@@ -6,7 +6,7 @@
 	(paper "A4")
 	(title_block
 		(title "PicoPOST Pro")
-		(date "2025-08-12")
+		(date "2025-08-23")
 		(rev "1.0")
 		(company "The Retro Web")
 	)
@@ -8467,7 +8467,7 @@
 				)
 			)
 		)
-		(property "Value" "27R"
+		(property "Value" "22R"
 			(at 134.62 35.3638 90)
 			(effects
 				(font
@@ -9175,7 +9175,7 @@
 				)
 			)
 		)
-		(property "Value" "1000"
+		(property "Value" "1k"
 			(at 80.01 123.19 90)
 			(effects
 				(font
@@ -9408,15 +9408,15 @@
 		(fields_autoplaced yes)
 		(uuid "45a6bc70-1f5e-499c-a52c-94f304c82a09")
 		(property "Reference" "R18"
-			(at 46.99 43.8064 90)
+			(at 46.99 34.4889 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "330"
-			(at 46.99 41.2695 90)
+		(property "Value" "470"
+			(at 46.99 36.9132 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10118,7 +10118,7 @@
 				)
 			)
 		)
-		(property "Value" "red"
+		(property "Value" "ISA Reset"
 			(at 55.88 41.91 0)
 			(effects
 				(font
@@ -10126,7 +10126,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Diode_SMD:Nexperia_CFP3_SOD-123W"
+		(property "Footprint" "Diode_SMD:D_0805_2012Metric"
 			(at 55.88 39.37 0)
 			(effects
 				(font
@@ -10254,7 +10254,7 @@
 				)
 			)
 		)
-		(property "Value" "1000"
+		(property "Value" "1k"
 			(at 80.01 118.11 90)
 			(effects
 				(font
@@ -10320,7 +10320,7 @@
 				)
 			)
 		)
-		(property "Value" "1000"
+		(property "Value" "1k"
 			(at 80.01 107.95 90)
 			(effects
 				(font
@@ -10386,7 +10386,7 @@
 				)
 			)
 		)
-		(property "Value" "1000"
+		(property "Value" "1k"
 			(at 80.01 113.03 90)
 			(effects
 				(font
@@ -11356,7 +11356,7 @@
 				)
 			)
 		)
-		(property "Value" "27R"
+		(property "Value" "22R"
 			(at 134.366 48.006 90)
 			(effects
 				(font
