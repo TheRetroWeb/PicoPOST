@@ -6,7 +6,7 @@
 	(paper "A4")
 	(title_block
 		(title "PicoPOST Pro")
-		(date "2025-08-12")
+		(date "2025-09-20")
 		(rev "1.0")
 		(company "The Retro Web")
 	)
@@ -2725,155 +2725,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Diode:PMEG60T20ELR"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "D"
-				(at 0 2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Value" "PMEG60T20ELR"
-				(at 0 -2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-				)
-			)
-			(property "Footprint" "Diode_SMD:Nexperia_CFP3_SOD-123W"
-				(at 0 -4.445 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PMEG60T20ELR.pdf"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "60V, 2A low leakage current Trench MEGA Schottky barrier rectifier, SOD-123W"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "ir diode"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Nexperia*CFP3*SOD?123W*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "PMEG60T20ELR_0_1"
-				(polyline
-					(pts
-						(xy -1.905 0.635) (xy -1.905 1.27) (xy -1.27 1.27) (xy -1.27 -1.27) (xy -0.635 -1.27) (xy -0.635 -0.635)
-					)
-					(stroke
-						(width 0.2032)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 1.27) (xy 1.27 -1.27) (xy -1.27 0) (xy 1.27 1.27)
-					)
-					(stroke
-						(width 0.2032)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 0) (xy -1.27 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "PMEG60T20ELR_1_1"
-				(pin passive line
-					(at -3.81 0 0)
-					(length 2.54)
-					(name "K"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 3.81 0 180)
-					(length 2.54)
-					(name "A"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "Memory_EEPROM:24LC00"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -4994,12 +4845,6 @@
 		(uuid "418b6e2a-8adc-4cdd-b81c-07d311eeea29")
 	)
 	(junction
-		(at 215.9 138.43)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "437ba1f3-fb81-4be3-9cfc-3fbb8f4b6dd5")
-	)
-	(junction
 		(at 78.74 26.67)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5076,6 +4921,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "bb5bc34f-d77f-41c8-a119-8b5b75b8043e")
+	)
+	(junction
+		(at 215.9 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ca820f60-074e-4cb7-9c32-5df36545c10c")
 	)
 	(junction
 		(at 49.022 25.4)
@@ -5709,7 +5560,7 @@
 	)
 	(wire
 		(pts
-			(xy 201.93 138.43) (xy 208.28 138.43)
+			(xy 209.55 138.43) (xy 215.9 138.43)
 		)
 		(stroke
 			(width 0)
@@ -12273,73 +12124,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Diode:PMEG60T20ELR")
-		(at 212.09 138.43 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "4577c53d-c253-486d-b84a-ac5859ac7ecc")
-		(property "Reference" "D6"
-			(at 212.4075 133.0409 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "3A SMAF"
-			(at 212.4075 135.4652 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Diode_SMD:D_SMA"
-			(at 212.09 133.985 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://assets.nexperia.com/documents/data-sheet/PMEG60T20ELR.pdf"
-			(at 212.09 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "60V, 2A low leakage current Trench MEGA Schottky barrier rectifier, SOD-123W"
-			(at 212.09 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "84769e98-a78b-4210-8edb-4e9437700f84")
-		)
-		(pin "2"
-			(uuid "7f69e305-dc26-4427-899d-93f4452dfddc")
-		)
-		(instances
-			(project "Pro rev1"
-				(path "/3ab67cd1-3ef8-4786-acf6-571fcccb6bb1/7d9f714f-3dd9-47e2-90d6-4eab021859f2"
-					(reference "D6")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:R")
 		(at 215.9 92.71 0)
 		(unit 1)
@@ -16700,7 +16484,7 @@
 	)
 	(symbol
 		(lib_id "power:VBUS")
-		(at 201.93 138.43 0)
+		(at 209.55 138.43 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -16709,7 +16493,7 @@
 		(fields_autoplaced yes)
 		(uuid "d6ab606f-b368-4838-b2cd-ced89877f5c1")
 		(property "Reference" "#PWR077"
-			(at 201.93 142.24 0)
+			(at 209.55 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16718,7 +16502,7 @@
 			)
 		)
 		(property "Value" "VBUS"
-			(at 201.93 134.2969 0)
+			(at 209.55 134.2969 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16726,7 +16510,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 201.93 138.43 0)
+			(at 209.55 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16735,7 +16519,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 201.93 138.43 0)
+			(at 209.55 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16744,7 +16528,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"VBUS\""
-			(at 201.93 138.43 0)
+			(at 209.55 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
