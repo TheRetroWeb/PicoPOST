@@ -60,11 +60,6 @@ public:
      */
     __attribute__((noreturn)) static void BlinkenHalt(ErrorCodes blinks);
 
-    inline bool UseNewRemote() const
-    {
-        return (hwMode == UserMode::I2CKeypad);
-    }
-
 private:
     enum class DebouncerStep : uint8_t {
         Poll = 0,
@@ -74,7 +69,7 @@ private:
 
     enum class UserMode : uint8_t {
         I2CKeypad, // PCB rev6 + I2C remote
-        GPIOKeypad, // PCB rev5 + I2C/GPIO remote
+        // GPIOKeypad, // PCB rev5 + I2C/GPIO remote
         Serial, // PCB rev? + no remote
 
         Invalid, // Useless
@@ -124,7 +119,6 @@ private:
     static std::unique_ptr<Application> instance;
 
     void PollI2CKeypad();
-    void PollGPIOKeypad();
     void Keystroke();
     void UserOutput();
     void StandbyTick();

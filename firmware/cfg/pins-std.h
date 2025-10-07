@@ -1,12 +1,10 @@
 /**
-  *    cfg/pins.h
-  * 
-  *    Handy global defines for pin/function mapping    
-  * 
-  **/
+ * @file pins-std.h
+ * @brief Pin definitions for the standard RP2040-based board (PCB Rev 6, 7 and 8)
+ */
 
-#ifndef PICOPOST_DEF_PINS
-#define PICOPOST_DEF_PINS
+#ifndef PICOPOST_DEF_PINS_STD
+#define PICOPOST_DEF_PINS_STD
 
 #define PIN_ISA_D0 2
 #define PIN_ISA_D1 3
@@ -52,13 +50,10 @@
 #define PIN_ADDRESS_BANK 19
 
 #define PIN_ISA_BRDY 18
-#define PIN_ISA_CLK_R6 20
-#define PIN_ISA_CLK_R5 -1
-#define PIN_ISA_RST_R6 22
-#define PIN_ISA_RST_R5 26
+#define PIN_ISA_CLK 20
+#define PIN_ISA_RST 22
 
-#define PIN_REMOTE_IRQ_R6 21
-#define PIN_REMOTE_IRQ_R5 -1
+#define PIN_REMOTE_IRQ 21
 
 // +5V monitor
 #define PIN_5V_MON 27
@@ -71,33 +66,4 @@
 #define PIN_I2C_SDA 0
 #define PIN_I2C_SCL 1
 
-/**
- * @note **Hardware Notes!**
- * 
- * Some slow IO has been moved to an external MCP23009 I2C expander, placed on
- * the remote PCB. ONLY FOR PCB REV 6!
- */
-
-#define PIN_KEY_UP_R5 20
-#define PIN_KEY_DOWN_R5 21
-#define PIN_KEY_SELECT_R5 22
-
-#define GPIOEXP_KEY_UP 0
-#define GPIOEXP_KEY_DOWN 3
-#define GPIOEXP_KEY_SELECT 2
-#define GPIOEXP_KEY_BACK 1
-#define GPIOEXP_OUT_BUZZER 4
-#define GPIOEXP_IN_DISPTYPE 5
-#define GPIOEXP_IN_DISPSIZE 6
-#define GPIOEXP_IN_DISPROT 7
-
-// Pin direction mask
-#define GPIOEXP_CFG_PINDIR 0b11101111
-
-// Pin polarity mask
-#define GPIOEXP_CFG_PINPOL 0b11111111
-
-// Pin IRQ source mask
-#define GPIOEXP_CFG_PINIRQ 0b00001111
-
-#endif // PICOPOST_DEF_PINS
+#endif // PICOPOST_DEF_PINS_STD

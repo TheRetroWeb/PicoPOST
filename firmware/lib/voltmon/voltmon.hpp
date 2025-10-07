@@ -31,10 +31,20 @@
 #include "calib.h"
 
 #include <cstdint>
+#include <map>
 
 class VoltMon {
 public:
+    enum class Source {
+        VOLT_5VP,
+        VOLT_12VP,
+        VOLT_5VN,
+        VOLT_12VN,
+    };
+
     VoltMon();
+
+    void RegisterSource(const Source src, unsigned int pin, unsigned int ch);
 
     double Read5() const;
     double Read12() const;
@@ -87,6 +97,13 @@ private:
     static constexpr double cfg_12V_coefficient { (cfg_12V_R2 + cfg_12V_R1) / cfg_12V_R2 };
     static constexpr double cfg_12V_adjust { CALIBADJ_12V };
     static constexpr double cfg_12V_factor { (cfg_adc_mVStep * cfg_12V_coefficient) * cfg_12V_adjust };
+
+    struct ChannelPair {
+        unsigned int pin;
+        unsigned int ch;
+    };
+
+    std::map<Source, ChannelPair> m_sources {};
 };
 
 #endif // PICOPOST_LIB_VOLTMON

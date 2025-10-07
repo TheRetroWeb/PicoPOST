@@ -48,7 +48,7 @@ public:
      * different ports.
      *
      */
-    void AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress = 0x0080);
+    void AddressReader(queue_t* list, const uint16_t baseAddress = 0x0080);
 
     /**
      * @brief Uses the ADC to probe the 5V and 12V supply rails
@@ -169,7 +169,7 @@ private:
     static Logic* s_instance;
 
     uint64_t m_lastReset { 0 };
-    uint m_resetPin { PIN_ISA_RST_R6 };
+    uint m_resetPin { PIN_ISA_RST };
     volatile bool m_appRunning { false };
     std::atomic<bool> m_quitLoop { false };
     PortReaderPIO m_pioMap {};

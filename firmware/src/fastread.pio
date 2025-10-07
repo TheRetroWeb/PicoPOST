@@ -5,6 +5,7 @@
 
 ; Bus ready pin
 .define public PIN_ISA_BRDY 18
+.define public PRO_PIN_ISA_BRDY_RD 15
 
 .program Bus_FastRead
 .side_set 1 opt
@@ -14,4 +15,14 @@
     in pins, 16                side 0     ; Push address LSB and data to ISR in one shot, and return to high-byte
                                           ; SM auto-push will automatically send ISR to FIFO
     wait 0 gpio PIN_ISA_BRDY              ; Profit?
+
+
+.program Bus_FastReadPro
+.side_set 2 opt
+    wait 1 gpio PRO_PIN_ISA_BRDY_RD side 0b11     ; Wait for bus_ready signal to transition high
+    in pins, 16 [ 3 ]               side 0b01     ; Push address MSB and data to ISR in one shot, then set bank switching to low-byte
+    nop [ 3 ]                       side 0b01     ; Wait for mux to stabilize, still set bank switching to low-byte
+    in pins, 16                     side 0b11     ; Push address LSB and data to ISR in one shot, and return to high-byte
+                                                ; SM auto-push will automatically send ISR to FIFO
+    wait 0 gpio PRO_PIN_ISA_BRDY_RD             ; Profit?
 

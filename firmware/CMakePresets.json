@@ -1,0 +1,25 @@
+{
+    "version": 4,
+    "configurePresets": [
+        {
+            "name": "picopost-rp2040",
+            "displayName": "PicoPOST",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "PICOPOST_BOARD_TYPE": "picopost-rp2040"
+            }
+        },
+        {
+            "name": "picopost-pro-rp2350",
+            "displayName": "PicoPOST Pro",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "PICOPOST_BOARD_TYPE": "picopost-pro-rp2350"
+            }
+        }
+    ]
+}

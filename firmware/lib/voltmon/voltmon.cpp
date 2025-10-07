@@ -7,16 +7,18 @@
 
 #include "voltmon.hpp"
 
-#include "pins.h"
-
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
 
 VoltMon::VoltMon()
 {
     adc_init();
-    adc_gpio_init(PIN_5V_MON);
-    adc_gpio_init(PIN_12V_MON);
+}
+
+void VoltMon::RegisterSource(const Source src, uint pin, uint ch)
+{
+    m_sources[src] = { pin, ch };
+    adc_gpio_init(pin);
 }
 
 double VoltMon::Read5() const
@@ -31,12 +33,20 @@ double VoltMon::Read12() const
 
 uint16_t VoltMon::Raw5() const
 {
-    adc_select_input(ADC_5V_MON);
-    return adc_read();
+    if (auto iter = m_sources.find(Source::VOLT_5VP); iter != m_sources.end()) {
+        const auto& cp = iter->second;
+        adc_select_input(cp.ch);
+        return adc_read();
+    }
+    return 0;
 }
 
 uint16_t VoltMon::Raw12() const
 {
-    adc_select_input(ADC_12V_MON);
-    return adc_read();
+    if (auto iter = m_sources.find(Source::VOLT_12VP); iter != m_sources.end()) {
+        const auto& cp = iter->second;
+        adc_select_input(cp.ch);
+        return adc_read();
+    }
+    return 0;
 }

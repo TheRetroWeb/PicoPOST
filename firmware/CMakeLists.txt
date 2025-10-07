@@ -1,6 +1,6 @@
 # Generated Cmake Pico project file
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.23)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -24,7 +24,43 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/cfg)
-set(PICO_BOARD picopost-rp2040)
+list(APPEND PROJ_DEFS PICOPOST_BOARD_TYPE_STD_RP2040=0)
+list(APPEND PROJ_DEFS PICOPOST_BOARD_TYPE_PRO_RP2350=1)
+if (NOT DEFINED PICOPOST_BOARD_TYPE)
+    message(FATAL_ERROR "PICOPOST_BOARD_TYPE not defined! Please define it in your build system (e.g. CMake GUI, command line, etc.)")
+elseif(PICOPOST_BOARD_TYPE STREQUAL "picopost-rp2040")
+    # valid for Rev6, Rev7 and Rev8
+    set(PICO_BOARD picopost-rp2040)
+    list(APPEND PROJ_DEFS PICOPOST_BOARD_ID=PICOPOST_BOARD_TYPE_STD_RP2040)
+    # Overclocking settings - 330 MHz nominal
+    # See pico-sdk/src/rp2_common/hardware_clocks/scripts/vcocalc.py for info about these magic numbers
+    list(APPEND PROJ_DEFS REQ_CLOCK_KHZ=330000)
+    list(APPEND PROJ_DEFS SYS_CLK_HZ=330000000)
+    list(APPEND PROJ_DEFS PLL_SYS_REFDIV=1)
+    list(APPEND PROJ_DEFS PLL_SYS_VCO_FREQ_HZ=1320000000)
+    list(APPEND PROJ_DEFS PLL_SYS_POSTDIV1=4)
+    list(APPEND PROJ_DEFS PLL_SYS_POSTDIV2=1)
+    # Set voltage before main so no need to do so on the fly
+    list(APPEND PROJ_DEFS SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST=1)
+    list(APPEND PROJ_DEFS SYS_CLK_VREG_VOLTAGE_MIN=VREG_VOLTAGE_1_25)
+elseif(PICOPOST_BOARD_TYPE STREQUAL "picopost-pro-rp2350")
+    # valid for Pro only!
+    set(PICO_BOARD picopost-pro-rp2350)
+    list(APPEND PROJ_DEFS PICOPOST_BOARD_ID=PICOPOST_BOARD_TYPE_PRO_RP2350)
+    # Overclocking settings - 330 MHz nominal
+    # See pico-sdk/src/rp2_common/hardware_clocks/scripts/vcocalc.py for info about these magic numbers
+    list(APPEND PROJ_DEFS REQ_CLOCK_KHZ=330000)
+    list(APPEND PROJ_DEFS SYS_CLK_HZ=330000000)
+    list(APPEND PROJ_DEFS PLL_SYS_REFDIV=1)
+    list(APPEND PROJ_DEFS PLL_SYS_VCO_FREQ_HZ=1320000000)
+    list(APPEND PROJ_DEFS PLL_SYS_POSTDIV1=4)
+    list(APPEND PROJ_DEFS PLL_SYS_POSTDIV2=1)
+    # Set voltage before main so no need to do so on the fly
+    list(APPEND PROJ_DEFS SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST=1)
+    list(APPEND PROJ_DEFS SYS_CLK_VREG_VOLTAGE_MIN=VREG_VOLTAGE_1_25)
+else()
+    message(FATAL_ERROR "Unknown PICOPOST_BOARD_TYPE: ${PICOPOST_BOARD_TYPE}. Check ./cfg for supported boards.")
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(PICO_DEOPTIMIZED_DEBUG 1)
@@ -33,7 +69,7 @@ endif()
 include(pico_sdk_import.cmake)
 
 project(pico_post_fw
-    VERSION 0.5.0
+    VERSION 0.9.9
     LANGUAGES C CXX ASM
 )
 
@@ -47,23 +83,17 @@ set(CALIBADJ_12V 1.000)
 list(APPEND PROJ_DEFS PICOPOST_STANDBY_TIMER=15)
 
 option(PICOPOST_USB_FALLBACK "Enable serial output if display not found" OFF)
-option(PICOPOST_SUPPORT_REV5 "[EXPERIMENTAL] Enable support for older Rev5 PCB" OFF)
 
 if(PICOPOST_USB_FALLBACK)
     list(APPEND PROJ_DEFS PICOPOST_USB_FALLBACK)
 endif()
 
-if(PICOPOST_SUPPORT_REV5)
-    list(APPEND PROJ_DEFS PICOPOST_SUPPORT_REV5)
-endif()
-
 # output configuration
 configure_file("cfg/proj.h.in" "cfg/proj.h")
-configure_file("cfg/pins.h.in" "cfg/pins.h")
 configure_file("cfg/calib.h.in" "cfg/calib.h")
 
-list(APPEND PROJ_INCS "${PROJECT_BINARY_DIR}/cfg")
-list(APPEND PROJ_INCS "${PROJECT_SOURCE_DIR}/include")
+list(APPEND PROJ_INCS "${pico_post_fw_BINARY_DIR}/cfg")
+list(APPEND PROJ_INCS "${pico_post_fw_SOURCE_DIR}/cfg")
 
 # import proj libraries
 add_subdirectory("${PROJECT_SOURCE_DIR}/lib/pico-oled")
@@ -100,24 +130,12 @@ target_link_libraries(pico_post_fw PUBLIC
 pico_enable_stdio_usb(pico_post_fw 1)
 pico_enable_stdio_uart(pico_post_fw 0)
 
-set(PICOPOST_UF2_FILENAME "PicoPOST-v${CMAKE_PROJECT_VERSION}")
+set(PICOPOST_UF2_FILENAME "${PICOPOST_BOARD_TYPE}-v${CMAKE_PROJECT_VERSION}")
 
 target_compile_definitions(pico_post_fw PRIVATE
-    # Overclocking settings - 330 MHz nominal
-    # See pico-sdk/src/rp2_common/hardware_clocks/scripts/vcocalc.py for info about these magic numbers
-    REQ_CLOCK_KHZ=330000
-    SYS_CLK_HZ=330000000
-    PLL_SYS_REFDIV=1
-    PLL_SYS_VCO_FREQ_HZ=1320000000
-    PLL_SYS_POSTDIV1=4
-    PLL_SYS_POSTDIV2=1
-    # Set voltage before main so no need to do so on the fly
-    SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST=1
-    SYS_CLK_VREG_VOLTAGE_MIN=VREG_VOLTAGE_1_25
-
+    ${PROJ_DEFS}
     QUEUE_DEPTH=8192
     PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=150
-    ${PROJ_DEFS}
 )
 
 # find includes

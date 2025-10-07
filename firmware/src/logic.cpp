@@ -26,7 +26,7 @@ void Logic::Stop()
     SetQuitFlag(false);
 }
 
-void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress)
+void Logic::AddressReader(queue_t* list, const uint16_t baseAddress)
 {
     if (m_appRunning) {
         panic("Someone forgot to initialize some stuff...");
@@ -36,18 +36,37 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
 
     // Configure PIO
     m_pioMap.hwBase = pio0;
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     m_pioMap.readerOffset = pio_add_program(m_pioMap.hwBase, &Bus_FastRead_program);
+#else
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+    m_pioMap.readerOffset = pio_add_program(m_pioMap.hwBase, &Bus_FastReadPro_program);
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     m_pioMap.readerSm = 0;
     pio_sm_claim(m_pioMap.hwBase, m_pioMap.readerSm);
     m_pioMap.pioIrq = PIO0_IRQ_0;
     m_pioMap.rstIrq = IO_IRQ_BANK0;
     m_pioMap.filterAddress = baseAddress;
 
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     pio_gpio_init(m_pioMap.hwBase, PIN_ADDRESS_BANK);
     pio_sm_set_consecutive_pindirs(m_pioMap.hwBase, m_pioMap.readerSm, PIN_ADDRESS_BANK, 1, true);
+#else
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+    pio_gpio_init(m_pioMap.hwBase, PIN_ADDRESS_BANK_0);
+    pio_sm_set_consecutive_pindirs(m_pioMap.hwBase, m_pioMap.readerSm, PIN_ADDRESS_BANK_0, 2, true);
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     pio_sm_set_consecutive_pindirs(m_pioMap.hwBase, m_pioMap.readerSm, PIN_ISA_D0, 16, false);
     pio_sm_config pioCfg = Bus_FastRead_program_get_default_config(m_pioMap.readerOffset);
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     sm_config_set_sideset_pins(&pioCfg, PIN_ADDRESS_BANK);
+#else
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+    sm_config_set_sideset_pins(&pioCfg, PIN_ADDRESS_BANK_0);
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
     sm_config_set_in_pins(&pioCfg, PIN_ISA_D0);
     sm_config_set_in_shift(&pioCfg, true, true, 32);
     sm_config_set_fifo_join(&pioCfg, PIO_FIFO_JOIN_RX);
@@ -66,7 +85,7 @@ void Logic::AddressReader(queue_t* list, bool newPcb, const uint16_t baseAddress
 
     m_lastReset = time_us_64();
 
-    m_resetPin = newPcb ? PIN_ISA_RST_R6 : PIN_ISA_RST_R5;
+    m_resetPin = PIN_ISA_RST;
     gpio_init(m_resetPin);
     gpio_set_dir(m_resetPin, GPIO_IN);
     gpio_pull_down(m_resetPin);
@@ -131,6 +150,15 @@ void Logic::VoltageMonitor(queue_t* list)
     if (m_volts == nullptr) {
         m_volts = std::make_unique<VoltMon>();
     }
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
+    m_volts->RegisterSource(VoltMon::Source::VOLT_5VP, PIN_5V_MON, ADC_5V_MON);
+    m_volts->RegisterSource(VoltMon::Source::VOLT_12VP, PIN_12V_MON, ADC_12V_MON);
+#else
+#if PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+    m_volts->RegisterSource(VoltMon::Source::VOLT_5VP, PIN_5V_MON, ADC_5V_MON);
+    m_volts->RegisterSource(VoltMon::Source::VOLT_12VP, PIN_12V_MON, ADC_12V_MON);
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_PRO_RP2350
+#endif // PICOPOST_BOARD_ID == PICOPOST_BOARD_TYPE_STD_RP2040
 
     QueueData qd = {
         .operation = QueueOperation::Volts

@@ -35,32 +35,32 @@ __attribute__((noreturn)) void Application::LogicTask()
 
     while (true) {
         if (self->hwMode == UserMode::Serial) {
-            self->logic->AddressReader(&self->dataQueue, false);
+            self->logic->AddressReader(&self->dataQueue);
         } else {
             switch (self->app_currentSelect) {
 
             case ProgramSelect::BusDump: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), Logic::AllAddresses);
+                self->logic->AddressReader(&self->dataQueue, Logic::AllAddresses);
             } break;
 
             case ProgramSelect::Port80Reader: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote());
+                self->logic->AddressReader(&self->dataQueue);
             } break;
 
             case ProgramSelect::Port84Reader: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), 0x84);
+                self->logic->AddressReader(&self->dataQueue, 0x84);
             } break;
 
             case ProgramSelect::Port90Reader: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), 0x90);
+                self->logic->AddressReader(&self->dataQueue, 0x90);
             } break;
 
             case ProgramSelect::Port300Reader: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), 0x300);
+                self->logic->AddressReader(&self->dataQueue, 0x300);
             } break;
 
             case ProgramSelect::Port378Reader: {
-                self->logic->AddressReader(&self->dataQueue, self->UseNewRemote(), 0x378);
+                self->logic->AddressReader(&self->dataQueue, 0x378);
             } break;
 
             case ProgramSelect::VoltageMonitor: {
@@ -84,20 +84,9 @@ __attribute__((noreturn)) void Application::UITask()
     switch (self->hwMode) {
     case UserMode::I2CKeypad: {
         // Initialize button IRQ and debounced key readout routine
-        gpio_init(PIN_REMOTE_IRQ_R6);
-        gpio_set_dir(PIN_REMOTE_IRQ_R6, GPIO_IN);
-        gpio_pull_up(PIN_REMOTE_IRQ_R6);
-    } break;
-
-    case UserMode::GPIOKeypad: {
-        // Initialize button GPIOs and key handler routine
-        // Buttons are active low, so enable internal pull-ups
-        uint pins[] = { PIN_KEY_UP_R5, PIN_KEY_DOWN_R5, PIN_KEY_SELECT_R5 };
-        for (const uint pin : pins) {
-            gpio_init(pin);
-            gpio_set_dir(pin, GPIO_IN);
-            gpio_pull_up(pin);
-        }
+        gpio_init(PIN_REMOTE_IRQ);
+        gpio_set_dir(PIN_REMOTE_IRQ, GPIO_IN);
+        gpio_pull_up(PIN_REMOTE_IRQ);
     } break;
 
     default: {
@@ -108,11 +97,7 @@ __attribute__((noreturn)) void Application::UITask()
     // Start UI loop
     while (true) {
         // Read keystrokes
-        if (self->UseNewRemote()) {
-            self->PollI2CKeypad();
-        } else if (self->hwMode == UserMode::GPIOKeypad) {
-            // TODO self->PollGPIOKeypad();
-        }
+        self->PollI2CKeypad();
 
         // Handle pending keystrokes
         if (self->keyboard.debounceStage == DebouncerStep::PendingEvent) {
@@ -135,7 +120,7 @@ void Application::PollI2CKeypad()
 
     case DebouncerStep::Poll: {
         if (time_us_64() >= this->keyboard.nextPoll) {
-            bool hwIrqPending = !gpio_get(PIN_REMOTE_IRQ_R6);
+            bool hwIrqPending = !gpio_get(PIN_REMOTE_IRQ);
             if (hwIrqPending) {
                 this->keyboard.irqFlagPoll = this->hw_gpioexp->GetInterruptCapture();
                 this->keyboard.debounceExpiry = time_us_64() + Application::c_debounceRate;
@@ -472,14 +457,7 @@ Application::Application()
         this->hw_gpioexp->SetInterruptEvent(GPIOEXP_CFG_PINIRQ);
         this->hw_gpioexp->SetPullUps(GPIOEXP_CFG_PINPOL);
     } else {
-#if defined(PICOPOST_SUPPORT_REV5)
-        printf("GPIO Exp KO! -> Assuming PCB rev5\n");
-        delete this->hw_gpioexp;
-        this->hw_gpioexp = nullptr;
-        this->hwMode = UserMode::GPIOKeypad;
-#else
         BlinkenHalt(ErrorCodes::ERR_MissingGPIOExpander);
-#endif
     }
 
     // Initialize OLED display on 1st I2C instance, @ 400 kHz, addr 0x3C
@@ -487,12 +465,10 @@ Application::Application()
     bool dispSize = false;
     bool dispFlip = false;
     pico_oled::Size libOledSize = pico_oled::Size::W128xH32;
-    if (this->UseNewRemote()) {
-        auto gpioConfig = this->hw_gpioexp->GetAll();
-        dispType = gpioConfig & (1 << GPIOEXP_IN_DISPTYPE);
-        dispSize = gpioConfig & (1 << GPIOEXP_IN_DISPSIZE);
-        dispFlip = gpioConfig & (1 << GPIOEXP_IN_DISPROT); 
-    }
+    auto gpioConfig = this->hw_gpioexp->GetAll();
+    dispType = gpioConfig & (1 << GPIOEXP_IN_DISPTYPE);
+    dispSize = gpioConfig & (1 << GPIOEXP_IN_DISPSIZE);
+    dispFlip = gpioConfig & (1 << GPIOEXP_IN_DISPROT);
     if (dispSize) {
         libOledSize = pico_oled::Size::W128xH64;
     }
